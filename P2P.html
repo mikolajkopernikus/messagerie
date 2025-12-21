@@ -316,6 +316,7 @@
         let peer = null;
         let conn = null;
         let encryptionKey = null;
+        let isInitiator = false; // Pour savoir qui génère la clé
 
         // Génération d'une clé de cryptage symétrique (AES-256)
         async function generateEncryptionKey() {
@@ -447,6 +448,8 @@
 
             updateStatus('Connexion en cours...', false);
             
+            isInitiator = true; // Celui qui se connecte est l'initiateur
+            
             conn = peer.connect(remotePeerId, {
                 reliable: true
             });
@@ -463,23 +466,34 @@
                 document.getElementById('disconnectBtn').style.display = 'block';
                 document.getElementById('encryptionBadge').style.display = 'inline-block';
 
-                // Générer et échanger les clés de cryptage
-                encryptionKey = await generateEncryptionKey();
-                const keyData = await exportKey(encryptionKey);
-                
-                // Envoyer la clé à l'autre peer
-                conn.send({ type: 'key', data: keyData });
-                
-                addSystemMessage('🔐 Connexion établie et cryptée !');
+                // Seul l'initiateur génère et partage la clé
+                if (isInitiator) {
+                    encryptionKey = await generateEncryptionKey();
+                    const keyData = await exportKey(encryptionKey);
+                    
+                    // Envoyer la clé à l'autre peer
+                    conn.send({ type: 'key', data: keyData });
+                    addSystemMessage('🔐 Connexion établie et cryptée !');
+                    console.log('Clé générée et envoyée');
+                } else {
+                    addSystemMessage('🔐 En attente de la clé de cryptage...');
+                }
             });
 
             conn.on('data', async (data) => {
                 if (data.type === 'key') {
-                    // Recevoir la clé de l'autre peer (on utilise la première reçue)
-                    if (!encryptionKey) {
-                        encryptionKey = await importKey(data.data);
-                    }
+                    // Recevoir la clé de l'autre peer
+                    encryptionKey = await importKey(data.data);
+                    addSystemMessage('🔐 Connexion établie et cryptée !');
+                    console.log('Clé reçue et importée');
                 } else if (data.type === 'message') {
+                    // Attendre que la clé soit disponible
+                    if (!encryptionKey) {
+                        console.error('Clé de cryptage non disponible');
+                        addMessage('[En attente de la clé de cryptage...]', 'received');
+                        return;
+                    }
+                    
                     // Déchiffrer et afficher le message
                     const decryptedMessage = await decryptMessage(data.data, encryptionKey);
                     addMessage(decryptedMessage, 'received');
