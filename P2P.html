@@ -88,8 +88,14 @@
             animation: pulse 2s infinite;
         }
 
+        .status-indicator.waiting {
+            background: #ffc107;
+            animation: pulse 2s infinite;
+        }
+
         .status-indicator.connected {
             background: #28a745;
+            animation: none;
         }
 
         @keyframes pulse {
@@ -319,7 +325,7 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>🔐 Messagerie Point à Point Cryptée <span style="font-size: 0.4em;">v0.31</span></h1>
+            <h1>🔐 Messagerie Point à Point Cryptée <span style="font-size: 0.4em;">v0.32</span></h1>
             <div class="header-info">
                 <span class="header-id" id="headerId"></span>
             </div>
@@ -387,6 +393,7 @@
         let remoteName = ''; // Nom du correspondant
         let myStoredId = localStorage.getItem('myPeerId') || ''; // ID conservé
         let remoteStoredId = localStorage.getItem('remotePeerId') || ''; // ID contact conservé
+        let inactivityTimer = null; // Timer pour déconnexion après 10 min d'inactivité
 
         // Consonnes et voyelles
         const consonnes = 'bcdfghjklmnpqrstvwxz';
@@ -403,6 +410,30 @@
         // Retirer les espaces d'un ID
         function unformatId(id) {
             return id.replace(/\s/g, '');
+        }
+
+        // Démarrer le timer d'inactivité (10 minutes)
+        function startInactivityTimer() {
+            clearInactivityTimer();
+            console.log('Démarrage du timer d\'inactivité (10 minutes)');
+            inactivityTimer = setTimeout(() => {
+                console.log('Timeout d\'inactivité atteint - Déconnexion du peer');
+                if (peer && !conn) {
+                    peer.destroy();
+                    peer = null;
+                    updateStatus('Déconnecté (inactivité)', false);
+                    document.getElementById('headerId').style.display = 'none';
+                }
+            }, 10 * 60 * 1000); // 10 minutes
+        }
+
+        // Annuler le timer d'inactivité
+        function clearInactivityTimer() {
+            if (inactivityTimer) {
+                console.log('Annulation du timer d\'inactivité');
+                clearTimeout(inactivityTimer);
+                inactivityTimer = null;
+            }
         }
 
         // Initialiser les champs au chargement
@@ -431,6 +462,20 @@
             const remoteIdField = document.getElementById('remotePeerId');
             if (remoteIdField && remoteStoredId) {
                 remoteIdField.value = formatId(remoteStoredId);
+            }
+            
+            // Changer le texte du bouton si les deux IDs sont pré-remplis
+            const connectBtn = document.getElementById('connectBtn');
+            if (myStoredId && remoteStoredId) {
+                connectBtn.textContent = '🔄 Se Re-connecter';
+            }
+            
+            // Auto-initialisation du peer si un ID existe déjà
+            if (myStoredId) {
+                console.log('Auto-initialisation du peer avec ID sauvegardé');
+                reinitializePeerWithStoredId().catch(err => {
+                    console.error('Erreur lors de l\'auto-initialisation:', err);
+                });
             }
         });
 
@@ -554,48 +599,56 @@
             myKeyPair = await generateKeyPair();
             console.log('Paire de clés ECDH créée');
             
-            // Utiliser l'ID conservé
-            peer = new Peer(myStoredId, {
-                host: '0.peerjs.com',
-                secure: true,
-                port: 443,
-                path: '/',
-                config: {
-                    iceServers: [
-                        { urls: 'stun:stun.l.google.com:19302' },
-                        { urls: 'stun:global.stun.twilio.com:3478' }
-                    ]
-                }
-            });
+            // Retourner une promesse qui se résout quand le peer est ouvert
+            return new Promise((resolve, reject) => {
+                // Utiliser l'ID conservé
+                peer = new Peer(myStoredId, {
+                    host: '0.peerjs.com',
+                    secure: true,
+                    port: 443,
+                    path: '/',
+                    config: {
+                        iceServers: [
+                            { urls: 'stun:stun.l.google.com:19302' },
+                            { urls: 'stun:global.stun.twilio.com:3478' }
+                        ]
+                    }
+                });
 
-            peer.on('open', (id) => {
-                document.getElementById('connectBtn').disabled = false;
-                updateStatus('En attente de connexion...', false);
-                
-                // Afficher l'ID dans le header
-                const headerIdElement = document.getElementById('headerId');
-                let headerText = '';
-                if (myName) {
-                    headerText = myName + ', <strong>ID:</strong> ' + formatId(id);
-                } else {
-                    headerText = '<strong>ID:</strong> ' + formatId(id);
-                }
-                headerIdElement.innerHTML = headerText;
-                headerIdElement.style.display = 'block';
-                
-                console.log('Peer réinitialisé avec ID:', id);
-            });
+                peer.on('open', (id) => {
+                    document.getElementById('connectBtn').disabled = false;
+                    updateStatus('En attente de connexion...', 'waiting');
+                    
+                    // Afficher l'ID dans le header
+                    const headerIdElement = document.getElementById('headerId');
+                    let headerText = '';
+                    if (myName) {
+                        headerText = myName + ', <strong>ID:</strong> ' + formatId(id);
+                    } else {
+                        headerText = '<strong>ID:</strong> ' + formatId(id);
+                    }
+                    headerIdElement.innerHTML = headerText;
+                    headerIdElement.style.display = 'block';
+                    
+                    // Démarrer le timer d'inactivité
+                    startInactivityTimer();
+                    
+                    console.log('Peer réinitialisé avec ID:', id);
+                    resolve(); // Résoudre la promesse quand le peer est ouvert
+                });
 
-            peer.on('connection', async (connection) => {
-                conn = connection;
-                setupConnection();
-                updateStatus('Connexion entrante...', false);
-            });
+                peer.on('connection', async (connection) => {
+                    conn = connection;
+                    setupConnection();
+                    updateStatus('Connexion entrante...', false);
+                });
 
-            peer.on('error', (err) => {
-                console.error('Erreur PeerJS lors de la réinitialisation:', err);
-                // En cas d'erreur, l'utilisateur devra re-générer un ID
-                document.getElementById('connectBtn').disabled = true;
+                peer.on('error', (err) => {
+                    console.error('Erreur PeerJS lors de la réinitialisation:', err);
+                    // En cas d'erreur, l'utilisateur devra re-générer un ID
+                    document.getElementById('connectBtn').disabled = true;
+                    reject(err); // Rejeter la promesse en cas d'erreur
+                });
             });
         }
 
@@ -644,7 +697,7 @@
                 
                 document.getElementById('myPeerId').value = formatId(id);
                 document.getElementById('connectBtn').disabled = false;
-                updateStatus('En attente de connexion...', false);
+                updateStatus('En attente de connexion...', 'waiting');
                 initBtn.textContent = '✅ Initialisé';
                 
                 // Afficher l'ID dans le header avec préfixe "ID:" et le nom si disponible
@@ -657,6 +710,9 @@
                 }
                 headerIdElement.innerHTML = headerText;
                 headerIdElement.style.display = 'block';
+                
+                // Démarrer le timer d'inactivité
+                startInactivityTimer();
                 
                 console.log('Mon Peer ID:', id);
             });
@@ -698,10 +754,13 @@
             if (!peer) {
                 if (myStoredId) {
                     console.log('Création du peer avec ID conservé avant connexion');
-                    await reinitializePeerWithStoredId();
-                    // Attendre 0.5 secondes que le peer s'enregistre sur le serveur
-                    console.log('Attente de 0.5s pour l\'enregistrement sur le serveur...');
-                    await new Promise(resolve => setTimeout(resolve, 500));
+                    try {
+                        await reinitializePeerWithStoredId();
+                        console.log('Peer prêt, connexion en cours...');
+                    } catch (err) {
+                        alert('Erreur lors de l\'initialisation: ' + err.message);
+                        return;
+                    }
                 } else {
                     alert('Veuillez d\'abord générer votre ID');
                     return;
@@ -720,7 +779,10 @@
         // Configuration de la connexion
         async function setupConnection() {
             conn.on('open', async () => {
-                updateStatus('Connecté', true);
+                // Annuler le timer d'inactivité car la connexion est établie
+                clearInactivityTimer();
+                
+                updateStatus('Connecté', 'connected');
                 document.getElementById('connectionPanel').classList.add('hidden');
                 document.getElementById('chatContainer').classList.add('active');
                 document.getElementById('disconnectBtn').style.display = 'block';
@@ -808,7 +870,7 @@
             });
 
             conn.on('close', () => {
-                updateStatus('Déconnecté', false);
+                updateStatus('Déconnecté', 'disconnected');
                 addSystemMessage('❌ Connexion fermée par le correspondant');
                 // Recharger la page pour réinitialiser proprement
                 setTimeout(() => {
@@ -897,18 +959,28 @@
         }
 
         // Mettre à jour le statut
-        function updateStatus(text, connected) {
+        // state: 'disconnected' (rouge), 'waiting' (jaune animé), 'connected' (vert fixe)
+        function updateStatus(text, state) {
             document.getElementById('statusText').textContent = text;
             const indicator = document.getElementById('statusIndicator');
-            if (connected) {
+            
+            // Retirer toutes les classes d'état
+            indicator.classList.remove('connected', 'waiting');
+            
+            // Ajouter la classe appropriée selon l'état
+            if (state === 'connected') {
                 indicator.classList.add('connected');
-            } else {
-                indicator.classList.remove('connected');
+            } else if (state === 'waiting') {
+                indicator.classList.add('waiting');
             }
+            // Si 'disconnected' ou false, pas de classe = rouge par défaut
         }
 
         // Déconnecter
         function disconnect() {
+            // Annuler le timer d'inactivité
+            clearInactivityTimer();
+            
             if (conn) {
                 conn.close();
             }
