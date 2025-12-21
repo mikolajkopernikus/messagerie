@@ -319,7 +319,7 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>🔐 Messagerie Point à Point Cryptée <span style="font-size: 0.4em;">v0.28</span></h1>
+            <h1>🔐 Messagerie Point à Point Cryptée <span style="font-size: 0.4em;">v0.32</span></h1>
             <div class="header-info">
                 <span class="header-id" id="headerId"></span>
             </div>
@@ -406,7 +406,7 @@
         }
 
         // Initialiser les champs au chargement
-        window.addEventListener('DOMContentLoaded', () => {
+        window.addEventListener('DOMContentLoaded', async () => {
             console.log('Initialisation des champs depuis localStorage');
             console.log('myName:', myName, 'myStoredId:', myStoredId, 'remoteStoredId:', remoteStoredId);
             
@@ -416,12 +416,14 @@
                 nameField.value = myName;
             }
             
-            // Pré-remplir l'ID si existant
+            // Pré-remplir l'ID si existant ET réinitialiser automatiquement le peer
             const myIdField = document.getElementById('myPeerId');
             if (myIdField && myStoredId) {
                 myIdField.value = formatId(myStoredId);
                 document.getElementById('initBtn').innerHTML = '🔄 Re-générer mon ID';
-                document.getElementById('connectBtn').disabled = false;
+                
+                // Réinitialiser automatiquement le peer avec l'ID conservé
+                await reinitializePeerWithStoredId();
             }
             
             // Pré-remplir l'ID du contact si existant
@@ -541,6 +543,59 @@
                 true,
                 []
             );
+        }
+
+        // Réinitialiser le peer avec l'ID stocké (lors du rechargement de page)
+        async function reinitializePeerWithStoredId() {
+            console.log('Réinitialisation automatique du peer avec ID conservé:', myStoredId);
+            
+            // Générer la paire de clés ECDH
+            myKeyPair = await generateKeyPair();
+            console.log('Paire de clés ECDH créée');
+            
+            // Utiliser l'ID conservé
+            peer = new Peer(myStoredId, {
+                host: '0.peerjs.com',
+                secure: true,
+                port: 443,
+                path: '/',
+                config: {
+                    iceServers: [
+                        { urls: 'stun:stun.l.google.com:19302' },
+                        { urls: 'stun:global.stun.twilio.com:3478' }
+                    ]
+                }
+            });
+
+            peer.on('open', (id) => {
+                document.getElementById('connectBtn').disabled = false;
+                updateStatus('En attente de connexion...', false);
+                
+                // Afficher l'ID dans le header
+                const headerIdElement = document.getElementById('headerId');
+                let headerText = '';
+                if (myName) {
+                    headerText = myName + ', <strong>ID:</strong> ' + formatId(id);
+                } else {
+                    headerText = '<strong>ID:</strong> ' + formatId(id);
+                }
+                headerIdElement.innerHTML = headerText;
+                headerIdElement.style.display = 'block';
+                
+                console.log('Peer réinitialisé avec ID:', id);
+            });
+
+            peer.on('connection', async (connection) => {
+                conn = connection;
+                setupConnection();
+                updateStatus('Connexion entrante...', false);
+            });
+
+            peer.on('error', (err) => {
+                console.error('Erreur PeerJS lors de la réinitialisation:', err);
+                // En cas d'erreur, l'utilisateur devra re-générer un ID
+                document.getElementById('connectBtn').disabled = true;
+            });
         }
 
         // Initialiser PeerJS
