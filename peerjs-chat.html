@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Chat peer-to-peer crypté avec PeerJS">
+    <meta name="theme-color" content="#667eea">
+    <link rel="manifest" href="manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="P2P Chat">
+    <title>Chat Crypté P2P - PeerJS</title>
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+
+        .header p {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .status {
+            padding: 15px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #dc3545;
+            animation: pulse 2s infinite;
+        }
+
+        .status-indicator.connected {
+            background: #28a745;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .connection-panel {
+            padding: 20px;
+        }
+
+        .input-group {
+            margin-bottom: 15px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #495057;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #dee2e6;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-bottom: 10px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        .chat-container {
+            display: none;
+            flex-direction: column;
+            height: 500px;
+        }
+
+        .chat-container.active {
+            display: flex;
+        }
+
+        .messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            background: #f8f9fa;
+        }
+
+        .message {
+            margin-bottom: 15px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .message.sent {
+            justify-content: flex-end;
+        }
+
+        .message-content {
+            max-width: 70%;
+            padding: 12px 16px;
+            border-radius: 18px;
+            word-wrap: break-word;
+        }
+
+        .message.received .message-content {
+            background: white;
+            border: 1px solid #dee2e6;
+            border-bottom-left-radius: 4px;
+        }
+
+        .message.sent .message-content {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+
+        .message-time {
+            font-size: 11px;
+            opacity: 0.6;
+            margin-top: 4px;
+        }
+
+        .input-container {
+            padding: 15px;
+            background: white;
+            border-top: 1px solid #dee2e6;
+            display: flex;
+            gap: 10px;
+        }
+
+        .input-container input {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #dee2e6;
+            border-radius: 25px;
+            font-size: 16px;
+        }
+
+        .input-container input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .input-container button {
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 25px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .input-container button:hover {
+            transform: scale(1.05);
+        }
+
+        .info-box {
+            background: #e7f3ff;
+            border-left: 4px solid #0066cc;
+            padding: 12px;
+            margin-bottom: 15px;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .encryption-badge {
+            display: inline-block;
+            background: #28a745;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔐 Messagerie Point à Point Cryptée</h1>
+            <p>Communication directe et sécurisée</p>
+        </div>
+
+        <div class="status">
+            <div class="status-indicator" id="statusIndicator"></div>
+            <div>
+                <strong id="statusText">Déconnecté</strong>
+                <span class="encryption-badge" id="encryptionBadge" style="display: none;">🔒 AES-256</span>
+            </div>
+        </div>
+
+        <!-- Panel de connexion -->
+        <div class="connection-panel" id="connectionPanel">
+            <div class="info-box">
+                <strong>Mode 1 :</strong> Génère votre ID et partagez-le.<br>
+                <strong>Mode 2 :</strong> Entrez l'ID de votre ami pour vous connecter.
+            </div>
+
+            <div class="input-group">
+                <label>Votre ID (sera généré automatiquement)</label>
+                <input type="text" id="myPeerId" readonly placeholder="Cliquez sur Initialiser...">
+            </div>
+
+            <button class="btn btn-primary" id="initBtn" onclick="initializePeer()">
+                🚀 Initialiser ma connexion
+            </button>
+
+            <div class="input-group">
+                <label>ID de votre correspondant</label>
+                <input type="text" id="remotePeerId" placeholder="Entrez l'ID à contacter">
+            </div>
+
+            <button class="btn btn-primary" id="connectBtn" onclick="connectToPeer()" disabled>
+                📞 Se connecter
+            </button>
+
+            <button class="btn btn-secondary" id="disconnectBtn" onclick="disconnect()" style="display: none;">
+                ❌ Déconnecter
+            </button>
+        </div>
+
+        <!-- Zone de chat -->
+        <div class="chat-container" id="chatContainer">
+            <div class="messages" id="messages"></div>
+            <div class="input-container">
+                <input type="text" id="messageInput" placeholder="Tapez votre message..." onkeypress="handleKeyPress(event)">
+                <button onclick="sendMessage()">Envoyer</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let peer = null;
+        let conn = null;
+        let encryptionKey = null;
+
+        // Génération d'une clé de cryptage symétrique (AES-256)
+        async function generateEncryptionKey() {
+            const key = await crypto.subtle.generateKey(
+                { name: 'AES-GCM', length: 256 },
+                true,
+                ['encrypt', 'decrypt']
+            );
+            return key;
+        }
+
+        // Cryptage d'un message
+        async function encryptMessage(message, key) {
+            const encoder = new TextEncoder();
+            const data = encoder.encode(message);
+            const iv = crypto.getRandomValues(new Uint8Array(12));
+            
+            const encrypted = await crypto.subtle.encrypt(
+                { name: 'AES-GCM', iv: iv },
+                key,
+                data
+            );
+            
+            // Combine IV + encrypted data
+            const combined = new Uint8Array(iv.length + encrypted.byteLength);
+            combined.set(iv);
+            combined.set(new Uint8Array(encrypted), iv.length);
+            
+            return btoa(String.fromCharCode(...combined));
+        }
+
+        // Décryptage d'un message
+        async function decryptMessage(encryptedData, key) {
+            try {
+                const combined = Uint8Array.from(atob(encryptedData), c => c.charCodeAt(0));
+                const iv = combined.slice(0, 12);
+                const data = combined.slice(12);
+                
+                const decrypted = await crypto.subtle.decrypt(
+                    { name: 'AES-GCM', iv: iv },
+                    key,
+                    data
+                );
+                
+                const decoder = new TextDecoder();
+                return decoder.decode(decrypted);
+            } catch (e) {
+                console.error('Erreur de décryptage:', e);
+                return '[Message non décryptable]';
+            }
+        }
+
+        // Export de la clé pour l'échange
+        async function exportKey(key) {
+            const exported = await crypto.subtle.exportKey('raw', key);
+            return btoa(String.fromCharCode(...new Uint8Array(exported)));
+        }
+
+        // Import de la clé reçue
+        async function importKey(keyData) {
+            const rawKey = Uint8Array.from(atob(keyData), c => c.charCodeAt(0));
+            return await crypto.subtle.importKey(
+                'raw',
+                rawKey,
+                { name: 'AES-GCM' },
+                true,
+                ['encrypt', 'decrypt']
+            );
+        }
+
+        // Initialiser PeerJS
+        function initializePeer() {
+            const initBtn = document.getElementById('initBtn');
+            initBtn.disabled = true;
+            initBtn.textContent = '⏳ Initialisation...';
+
+            // Générer un ID aléatoire simple
+            const randomId = 'user-' + Math.random().toString(36).substr(2, 9);
+            
+            peer = new Peer(randomId, {
+                host: 'peerjs-server.herokuapp.com',
+                secure: true,
+                port: 443
+            });
+
+            peer.on('open', (id) => {
+                document.getElementById('myPeerId').value = id;
+                document.getElementById('connectBtn').disabled = false;
+                updateStatus('En attente de connexion...', false);
+                initBtn.textContent = '✅ Initialisé';
+                console.log('Mon Peer ID:', id);
+            });
+
+            peer.on('connection', async (connection) => {
+                conn = connection;
+                setupConnection();
+                updateStatus('Connexion entrante...', false);
+            });
+
+            peer.on('error', (err) => {
+                console.error('Erreur PeerJS:', err);
+                alert('Erreur: ' + err.message);
+                initBtn.disabled = false;
+                initBtn.textContent = '🚀 Initialiser ma connexion';
+            });
+        }
+
+        // Se connecter à un peer
+        async function connectToPeer() {
+            const remotePeerId = document.getElementById('remotePeerId').value.trim();
+            
+            if (!remotePeerId) {
+                alert('Veuillez entrer un ID valide');
+                return;
+            }
+
+            if (!peer) {
+                alert('Veuillez d\'abord initialiser votre connexion');
+                return;
+            }
+
+            updateStatus('Connexion en cours...', false);
+            
+            conn = peer.connect(remotePeerId, {
+                reliable: true
+            });
+            
+            setupConnection();
+        }
+
+        // Configuration de la connexion
+        async function setupConnection() {
+            conn.on('open', async () => {
+                updateStatus('Connecté', true);
+                document.getElementById('connectionPanel').classList.add('hidden');
+                document.getElementById('chatContainer').classList.add('active');
+                document.getElementById('disconnectBtn').style.display = 'block';
+                document.getElementById('encryptionBadge').style.display = 'inline-block';
+
+                // Générer et échanger les clés de cryptage
+                encryptionKey = await generateEncryptionKey();
+                const keyData = await exportKey(encryptionKey);
+                
+                // Envoyer la clé à l'autre peer
+                conn.send({ type: 'key', data: keyData });
+                
+                addSystemMessage('🔐 Connexion établie et cryptée !');
+            });
+
+            conn.on('data', async (data) => {
+                if (data.type === 'key') {
+                    // Recevoir la clé de l'autre peer (on utilise la première reçue)
+                    if (!encryptionKey) {
+                        encryptionKey = await importKey(data.data);
+                    }
+                } else if (data.type === 'message') {
+                    // Déchiffrer et afficher le message
+                    const decryptedMessage = await decryptMessage(data.data, encryptionKey);
+                    addMessage(decryptedMessage, 'received');
+                }
+            });
+
+            conn.on('close', () => {
+                updateStatus('Déconnecté', false);
+                addSystemMessage('❌ Connexion fermée');
+                resetChat();
+            });
+
+            conn.on('error', (err) => {
+                console.error('Erreur de connexion:', err);
+                addSystemMessage('⚠️ Erreur de connexion');
+            });
+        }
+
+        // Envoyer un message
+        async function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const message = input.value.trim();
+            
+            if (!message || !conn || !encryptionKey) return;
+
+            try {
+                const encryptedMessage = await encryptMessage(message, encryptionKey);
+                conn.send({ type: 'message', data: encryptedMessage });
+                addMessage(message, 'sent');
+                input.value = '';
+            } catch (e) {
+                console.error('Erreur d\'envoi:', e);
+                addSystemMessage('⚠️ Erreur d\'envoi du message');
+            }
+        }
+
+        // Gérer la touche Entrée
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        }
+
+        // Ajouter un message à l'interface
+        function addMessage(text, type) {
+            const messagesDiv = document.getElementById('messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${type}`;
+            
+            const now = new Date();
+            const time = now.getHours().toString().padStart(2, '0') + ':' + 
+                        now.getMinutes().toString().padStart(2, '0');
+            
+            messageDiv.innerHTML = `
+                <div class="message-content">
+                    ${escapeHtml(text)}
+                    <div class="message-time">${time}</div>
+                </div>
+            `;
+            
+            messagesDiv.appendChild(messageDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        // Ajouter un message système
+        function addSystemMessage(text) {
+            const messagesDiv = document.getElementById('messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.style.textAlign = 'center';
+            messageDiv.style.color = '#6c757d';
+            messageDiv.style.fontSize = '14px';
+            messageDiv.style.margin = '10px 0';
+            messageDiv.textContent = text;
+            messagesDiv.appendChild(messageDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        // Échapper le HTML
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Mettre à jour le statut
+        function updateStatus(text, connected) {
+            document.getElementById('statusText').textContent = text;
+            const indicator = document.getElementById('statusIndicator');
+            if (connected) {
+                indicator.classList.add('connected');
+            } else {
+                indicator.classList.remove('connected');
+            }
+        }
+
+        // Déconnecter
+        function disconnect() {
+            if (conn) {
+                conn.close();
+            }
+            if (peer) {
+                peer.destroy();
+            }
+            resetChat();
+            location.reload();
+        }
+
+        // Réinitialiser le chat
+        function resetChat() {
+            document.getElementById('connectionPanel').classList.remove('hidden');
+            document.getElementById('chatContainer').classList.remove('active');
+            document.getElementById('messages').innerHTML = '';
+            document.getElementById('encryptionBadge').style.display = 'none';
+            encryptionKey = null;
+        }
+
+        // Enregistrer le Service Worker pour PWA
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./service-worker.js')
+                    .then((registration) => {
+                        console.log('Service Worker enregistré avec succès:', registration.scope);
+                    })
+                    .catch((error) => {
+                        console.log('Erreur d\'enregistrement du Service Worker:', error);
+                    });
+            });
+        }
+    </script>
+</body>
+</html>
