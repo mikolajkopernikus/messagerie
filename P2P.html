@@ -303,7 +303,7 @@
         <div class="header">
             <h1>🔐 Messagerie Point à Point Cryptée</h1>
             <div class="header-info">
-                <span class="header-version">v0.19</span>
+                <span class="header-version">v0.20</span>
                 <span class="header-id" id="headerId"></span>
             </div>
         </div>
@@ -329,8 +329,7 @@
             </div>
 
             <div class="input-group">
-                <label>Votre ID (sera généré automatiquement)</label>
-                <input type="text" id="myPeerId" readonly placeholder="Cliquez sur Initialiser...">
+                <label>Votre ID (généré automatiquement) <input type="text" id="myPeerId" readonly placeholder="Cliquez sur Initialiser..."></label>
             </div>
 
             <button class="btn btn-primary" id="initBtn" onclick="initializePeer()">
@@ -338,8 +337,7 @@
             </button>
 
             <div class="input-group">
-                <label>ID de votre correspondant</label>
-                <input type="text" id="remotePeerId" placeholder="Entrez l'ID à contacter" oninput="this.value = this.value.toLowerCase()">
+                <label>ID de votre correspondant <input type="text" id="remotePeerId" placeholder="Entrez l'ID à contacter" oninput="this.value = this.value.toLowerCase()"></label>
             </div>
 
             <button class="btn btn-primary" id="connectBtn" onclick="connectToPeer()" disabled>
@@ -399,35 +397,17 @@
             return id;
         }
 
-        // Formater l'ID avec espaces: xxxx xx xxxx
-        // Format: 4 lettres, espace, chiffre+checksum, espace, 4 lettres
-        // Exemple: boka3belut -> boka 3b elut
+        // Formater l'ID avec espaces: xxxx xxxx xx
+        // Format: 4 lettres, espace, 4 lettres, espace, 2 lettres
+        // Exemple: bokaletufr -> boka letu fr
         function formatId(id) {
             if (id.length < 10) return id;
-            return id.slice(0, 4) + ' ' + id.slice(4, 6) + ' ' + id.slice(6);
+            return id.slice(0, 4) + ' ' + id.slice(4, 8) + ' ' + id.slice(8);
         }
 
         // Retirer les espaces d'un ID
         function unformatId(id) {
             return id.replace(/\s/g, '');
-        }
-
-        // Calculer la lettre de contrôle (checksum) - retourne une consonne
-        function calculateChecksum(id) {
-            let sum = 0;
-            for (let i = 0; i < id.length; i++) {
-                sum += id.charCodeAt(i);
-            }
-            const consonneIndex = sum % consonnes.length;
-            return consonnes[consonneIndex];
-        }
-
-        // Vérifier la lettre de contrôle
-        function verifyChecksum(idWithCheck) {
-            if (idWithCheck.length < 2) return false;
-            const id = idWithCheck.slice(0, -1);
-            const checkChar = idWithCheck.slice(-1);
-            return calculateChecksum(id) === checkChar;
         }
 
         // Génération d'une paire de clés ECDH (cryptage asymétrique)
@@ -543,10 +523,8 @@
             console.log('Paire de clés ECDH créée');
 
             // Générer un ID lisible avec alternance consonne-voyelle
-            const baseId = generateReadableId();
-            const checkChar = calculateChecksum(baseId);
-            const randomId = baseId + checkChar;
-            console.log('ID généré (9 car. avec checksum):', randomId);
+            const randomId = generateReadableId();
+            console.log('ID généré (10 caractères):', randomId);
             
             // Utiliser le serveur officiel de PeerJS
             peer = new Peer(randomId, {
@@ -595,14 +573,8 @@
             const remoteInput = document.getElementById('remotePeerId').value;
             const remotePeerId = unformatId(remoteInput).trim().toLowerCase();
             
-            if (!remotePeerId) {
-                alert('Veuillez entrer un ID valide');
-                return;
-            }
-
-            // Vérifier la lettre de contrôle
-            if (!verifyChecksum(remotePeerId)) {
-                alert('⚠️ ID invalide : la lettre de contrôle ne correspond pas.\nVérifiez que vous avez correctement copié l\'ID.');
+            if (!remotePeerId || remotePeerId.length !== 10) {
+                alert('Veuillez entrer un ID valide (10 caractères)');
                 return;
             }
 
