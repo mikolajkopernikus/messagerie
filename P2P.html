@@ -303,7 +303,7 @@
         <div class="header">
             <h1>🔐 Messagerie Point à Point Cryptée</h1>
             <div class="header-info">
-                <span class="header-version">v0.22</span>
+                <span class="header-version">v0.23</span>
                 <span class="header-id" id="headerId"></span>
             </div>
         </div>
@@ -372,26 +372,18 @@
         const consonnes = 'bcdfghjklmnpqrstvwxz';
         const voyelles = 'aeiouy';
 
-        // Générer un ID avec alternance consonne-voyelle + chiffre au milieu
-        // Format: cvvc + chiffre + vcvc = 4 lettres + 1 chiffre + 4 lettres
+        // Générer un ID avec alternance consonne-voyelle
+        // Format: CVCV CVCV CV = 10 caractères (C=consonne, V=voyelle)
         function generateReadableId() {
             let id = '';
-            // 4 premiers caractères: cvvc
-            for (let i = 0; i < 4; i++) {
+            // 10 caractères en alternance C-V-C-V...
+            for (let i = 0; i < 10; i++) {
                 if (i % 2 === 0) {
+                    // Positions paires (0,2,4,6,8) = consonnes
                     id += consonnes[Math.floor(Math.random() * consonnes.length)];
                 } else {
+                    // Positions impaires (1,3,5,7,9) = voyelles
                     id += voyelles[Math.floor(Math.random() * voyelles.length)];
-                }
-            }
-            // 1 chiffre au milieu
-            id += Math.floor(Math.random() * 10);
-            // 4 derniers caractères: vcvc
-            for (let i = 0; i < 4; i++) {
-                if (i % 2 === 0) {
-                    id += voyelles[Math.floor(Math.random() * voyelles.length)];
-                } else {
-                    id += consonnes[Math.floor(Math.random() * consonnes.length)];
                 }
             }
             return id;
