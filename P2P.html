@@ -40,6 +40,7 @@
             color: white;
             padding: 20px;
             text-align: center;
+            position: relative;
         }
 
         .header h1 {
@@ -50,6 +51,19 @@
         .header p {
             font-size: 14px;
             opacity: 0.9;
+        }
+
+        .header-id {
+            position: absolute;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 11px;
+            color: #4CAF50;
+            font-weight: 600;
+            display: none;
+            max-width: 150px;
+            word-break: break-all;
         }
 
         .status {
@@ -218,14 +232,20 @@
         }
 
         .input-container button {
-            padding: 12px 24px;
+            padding: 12px 20px;
             background: linear-gradient(135deg, #3a3a3a 0%, #2c3e50 100%);
             color: white;
             border: none;
-            border-radius: 25px;
+            border-radius: 50%;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.3s;
+            font-size: 20px;
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .input-container button:hover {
@@ -262,6 +282,7 @@
         <div class="header">
             <h1>🔐 Messagerie Point à Point Cryptée</h1>
             <p>v0.10</p>
+            <div class="header-id" id="headerId"></div>
         </div>
 
         <div class="status">
@@ -307,7 +328,7 @@
             <div class="messages" id="messages"></div>
             <div class="input-container">
                 <input type="text" id="messageInput" placeholder="Tapez votre message..." onkeypress="handleKeyPress(event)">
-                <button onclick="sendMessage()">Envoyer</button>
+                <button onclick="sendMessage()">▶</button>
             </div>
         </div>
     </div>
@@ -467,6 +488,12 @@
                 document.getElementById('connectBtn').disabled = false;
                 updateStatus('En attente de connexion...', false);
                 initBtn.textContent = '✅ Initialisé';
+                
+                // Afficher l'ID dans le header
+                const headerIdElement = document.getElementById('headerId');
+                headerIdElement.textContent = id;
+                headerIdElement.style.display = 'block';
+                
                 console.log('Mon Peer ID:', id);
             });
 
