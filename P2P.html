@@ -287,7 +287,7 @@
         <div class="header">
             <h1>🔐 Messagerie Point à Point Cryptée</h1>
             <div class="header-info">
-                <span class="header-version">v0.14</span>
+                <span class="header-version">v0.15</span>
                 <span class="header-id" id="headerId"></span>
             </div>
         </div>
@@ -305,6 +305,11 @@
             <div class="info-box">
                 <strong>Mode 1 :</strong> Génère votre ID et partagez-le.<br>
                 <strong>Mode 2 :</strong> Entrez l'ID de votre ami pour vous connecter.
+            </div>
+
+            <div class="input-group">
+                <label>Votre nom (facultatif)</label>
+                <input type="text" id="myName" placeholder="Entrez votre nom" maxlength="20">
             </div>
 
             <div class="input-group">
@@ -346,6 +351,8 @@
         let encryptionKey = null;
         let myKeyPair = null; // Ma paire de clés ECDH
         let otherPublicKey = null; // Clé publique de l'autre peer
+        let myName = localStorage.getItem('myName') || 'Anonyme'; // Nom permanent
+        let remoteName = ''; // Nom du correspondant
 
         // Consonnes et voyelles
         const consonnes = 'bcdfghjklmnpqrstvwxz';
@@ -485,6 +492,13 @@
             initBtn.disabled = true;
             initBtn.textContent = '⏳ Initialisation...';
 
+            // Sauvegarder le nom s'il a été modifié
+            const nameInput = document.getElementById('myName');
+            if (nameInput.value.trim()) {
+                myName = nameInput.value.trim();
+                localStorage.setItem('myName', myName);
+            }
+
             // Générer la paire de clés ECDH dès le début
             myKeyPair = await generateKeyPair();
             console.log('Paire de clés ECDH créée');
@@ -578,14 +592,23 @@
                 // Exporter et envoyer ma clé publique à l'autre peer
                 const myPublicKeyData = await exportPublicKey(myKeyPair.publicKey);
                 conn.send({ type: 'public-key', data: myPublicKeyData });
-                console.log('Clé publique ECDH envoyée');
+                
+                // Envoyer mon nom
+                conn.send({ type: 'name', data: myName });
+                
+                console.log('Clé publique ECDH et nom envoyés');
                 addSystemMessage('🔐 Échange de clés en cours...');
             });
 
             conn.on('data', async (data) => {
                 console.log('Données reçues:', data.type);
                 
-                if (data.type === 'public-key') {
+                if (data.type === 'name') {
+                    // Recevoir le nom du correspondant
+                    remoteName = data.data;
+                    updateStatus('Connecté avec ' + remoteName, true);
+                    console.log('Nom du correspondant:', remoteName);
+                } else if (data.type === 'public-key') {
                     // Recevoir la clé publique de l'autre peer
                     try {
                         otherPublicKey = await importPublicKey(data.data);
@@ -751,6 +774,12 @@
         // Enregistrer le Service Worker pour PWA
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
+                // Charger le nom sauvegardé
+                const nameInput = document.getElementById('myName');
+                if (myName && myName !== 'Anonyme') {
+                    nameInput.value = myName;
+                }
+
                 navigator.serviceWorker.register('./service-worker.js')
                     .then((registration) => {
                         console.log('Service Worker enregistré avec succès:', registration.scope);
