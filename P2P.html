@@ -301,7 +301,7 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>🔐 Messagerie Point à Point Cryptée <span style="font-size: 0.4em;">v0.25</span></h1>
+            <h1>🔐 Messagerie Point à Point Cryptée <span style="font-size: 0.4em;">v0.26</span></h1>
             <div class="header-info">
                 <span class="header-id" id="headerId"></span>
             </div>
@@ -366,10 +366,29 @@
         let otherPublicKey = null; // Clé publique de l'autre peer
         let myName = localStorage.getItem('myName') || 'Anonyme'; // Nom permanent
         let remoteName = ''; // Nom du correspondant
+        let myStoredId = localStorage.getItem('myPeerId') || ''; // ID conservé
+        let remoteStoredId = localStorage.getItem('remotePeerId') || ''; // ID contact conservé
 
         // Consonnes et voyelles
         const consonnes = 'bcdfghjklmnpqrstvwxz';
         const voyelles = 'aeiouy';
+
+        // Initialiser les champs au chargement
+        window.addEventListener('DOMContentLoaded', () => {
+            // Pré-remplir le nom
+            if (myName && myName !== 'Anonyme') {
+                document.getElementById('myName').value = myName;
+            }
+            // Pré-remplir l'ID si existant
+            if (myStoredId) {
+                document.getElementById('myPeerId').value = formatId(myStoredId);
+                document.getElementById('initBtn').innerHTML = '🔄 Re-générer mon ID';
+            }
+            // Pré-remplir l'ID du contact si existant
+            if (remoteStoredId) {
+                document.getElementById('remotePeerId').value = formatId(remoteStoredId);
+            }
+        });
 
         // Générer un ID avec alternance consonne-voyelle
         // Format: CVCV CVCV CV = 10 caractères (C=consonne, V=voyelle)
@@ -532,6 +551,10 @@
             });
 
             peer.on('open', (id) => {
+                // Sauvegarder l'ID dans localStorage
+                myStoredId = id;
+                localStorage.setItem('myPeerId', id);
+                
                 document.getElementById('myPeerId').value = formatId(id);
                 document.getElementById('connectBtn').disabled = false;
                 updateStatus('En attente de connexion...', false);
@@ -574,6 +597,10 @@
                 alert('Veuillez entrer un ID valide (10 caractères)');
                 return;
             }
+            
+            // Sauvegarder l'ID du contact
+            remoteStoredId = remotePeerId;
+            localStorage.setItem('remotePeerId', remotePeerId);
 
             if (!peer) {
                 alert('Veuillez d\'abord initialiser votre connexion');
@@ -766,6 +793,7 @@
                 peer.destroy();
             }
             resetChat();
+            // Recharger la page pour revenir à l'accueil avec l'ID pré-renseigné
             location.reload();
         }
 
