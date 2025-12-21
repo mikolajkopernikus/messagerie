@@ -105,6 +105,22 @@
             margin-bottom: 15px;
         }
 
+        .input-group.inline {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .input-group.inline label {
+            flex-shrink: 0;
+            margin-bottom: 0;
+        }
+
+        .input-group.inline input {
+            flex: 1;
+            max-width: 200px;
+        }
+
         .input-group label {
             display: block;
             margin-bottom: 5px;
@@ -287,7 +303,7 @@
         <div class="header">
             <h1>🔐 Messagerie Point à Point Cryptée</h1>
             <div class="header-info">
-                <span class="header-version">v0.15</span>
+                <span class="header-version">v0.17</span>
                 <span class="header-id" id="headerId"></span>
             </div>
         </div>
@@ -307,7 +323,7 @@
                 <strong>Mode 2 :</strong> Entrez l'ID de votre ami pour vous connecter.
             </div>
 
-            <div class="input-group">
+            <div class="input-group inline">
                 <label>Votre nom (facultatif)</label>
                 <input type="text" id="myName" placeholder="Entrez votre nom" maxlength="20">
             </div>
