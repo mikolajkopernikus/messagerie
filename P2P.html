@@ -42,7 +42,6 @@
             color: white;
             padding: 20px;
             text-align: center;
-            position: relative;
         }
 
         .header h1 {
@@ -50,22 +49,23 @@
             margin-bottom: 5px;
         }
 
-        .header p {
+        .header-info {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
             font-size: 14px;
+        }
+
+        .header-version {
             opacity: 0.9;
         }
 
         .header-id {
-            position: absolute;
-            right: 20px;
-            top: 50%;
-            transform: translateY(-50%);
             font-size: 11px;
             color: #4CAF50;
             font-weight: 600;
             display: none;
-            max-width: 150px;
-            word-break: break-all;
         }
 
         .status {
@@ -283,8 +283,10 @@
     <div class="container">
         <div class="header">
             <h1>🔐 Messagerie Point à Point Cryptée</h1>
-            <p>v0.12</p>
-            <div class="header-id" id="headerId"></div>
+            <div class="header-info">
+                <span class="header-version">v0.13</span>
+                <span class="header-id" id="headerId"></span>
+            </div>
         </div>
 
         <div class="status">
