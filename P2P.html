@@ -473,19 +473,34 @@
                     
                     // Envoyer la clé à l'autre peer
                     conn.send({ type: 'key', data: keyData });
-                    addSystemMessage('🔐 Connexion établie et cryptée !');
-                    console.log('Clé générée et envoyée');
+                    console.log('Clé générée et envoyée (initiateur)');
+                    addSystemMessage('🔐 Clé de cryptage envoyée...');
                 } else {
+                    console.log('En attente de la clé (récepteur)');
                     addSystemMessage('🔐 En attente de la clé de cryptage...');
                 }
             });
 
             conn.on('data', async (data) => {
+                console.log('Données reçues:', data.type);
+                
                 if (data.type === 'key') {
                     // Recevoir la clé de l'autre peer
-                    encryptionKey = await importKey(data.data);
+                    try {
+                        encryptionKey = await importKey(data.data);
+                        console.log('Clé reçue et importée avec succès');
+                        addSystemMessage('🔐 Connexion établie et cryptée !');
+                        
+                        // Envoyer confirmation que la clé est bien reçue
+                        conn.send({ type: 'key-ack' });
+                    } catch (e) {
+                        console.error('Erreur import clé:', e);
+                        addSystemMessage('⚠️ Erreur lors de l\'import de la clé');
+                    }
+                } else if (data.type === 'key-ack') {
+                    // Confirmation que l'autre peer a bien reçu la clé
+                    console.log('Confirmation de réception de la clé');
                     addSystemMessage('🔐 Connexion établie et cryptée !');
-                    console.log('Clé reçue et importée');
                 } else if (data.type === 'message') {
                     // Attendre que la clé soit disponible
                     if (!encryptionKey) {
@@ -495,8 +510,15 @@
                     }
                     
                     // Déchiffrer et afficher le message
-                    const decryptedMessage = await decryptMessage(data.data, encryptionKey);
-                    addMessage(decryptedMessage, 'received');
+                    try {
+                        console.log('Tentative de décryptage du message...');
+                        const decryptedMessage = await decryptMessage(data.data, encryptionKey);
+                        console.log('Message décrypté:', decryptedMessage);
+                        addMessage(decryptedMessage, 'received');
+                    } catch (e) {
+                        console.error('Erreur de décryptage:', e);
+                        addMessage('[Erreur de décryptage]', 'received');
+                    }
                 }
             });
 
@@ -517,10 +539,18 @@
             const input = document.getElementById('messageInput');
             const message = input.value.trim();
             
-            if (!message || !conn || !encryptionKey) return;
+            if (!message || !conn) return;
+            
+            // Vérifier que la clé est disponible
+            if (!encryptionKey) {
+                alert('⚠️ Clé de cryptage non disponible. Attendez la synchronisation...');
+                return;
+            }
 
             try {
+                console.log('Cryptage du message:', message);
                 const encryptedMessage = await encryptMessage(message, encryptionKey);
+                console.log('Message crypté, envoi...');
                 conn.send({ type: 'message', data: encryptedMessage });
                 addMessage(message, 'sent');
                 input.value = '';
