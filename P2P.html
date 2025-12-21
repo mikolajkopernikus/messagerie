@@ -301,9 +301,8 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>🔐 Messagerie Point à Point Cryptée</h1>
+            <h1>🔐 Messagerie Point à Point Cryptée <span style="font-size: 0.4em;">v0.24</span></h1>
             <div class="header-info">
-                <span class="header-version">v0.23</span>
                 <span class="header-id" id="headerId"></span>
             </div>
         </div>
@@ -324,8 +323,8 @@
             </div>
 
             <div class="input-group inline">
-                <label>Votre nom (facultatif)</label>
-                <input type="text" id="myName" placeholder="Entrez votre nom" maxlength="20" style="width: 20ch;">
+                <label>Votre nom <span style="font-size: 0.85em;">(optionnel)</span></label>
+                <input type="text" id="myName" placeholder="Entrez votre nom" maxlength="18" style="width: 20ch;">
             </div>
 
             <div class="input-group">
@@ -538,9 +537,15 @@
                 updateStatus('En attente de connexion...', false);
                 initBtn.textContent = '✅ Initialisé';
                 
-                // Afficher l'ID dans le header avec préfixe "ID:"
+                // Afficher l'ID dans le header avec préfixe "ID:" et le nom si disponible
                 const headerIdElement = document.getElementById('headerId');
-                headerIdElement.innerHTML = '<strong>ID:</strong> ' + formatId(id);
+                let headerText = '';
+                if (myName) {
+                    headerText = myName + ', <strong>ID:</strong> ' + formatId(id);
+                } else {
+                    headerText = '<strong>ID:</strong> ' + formatId(id);
+                }
+                headerIdElement.innerHTML = headerText;
                 headerIdElement.style.display = 'block';
                 
                 console.log('Mon Peer ID:', id);
