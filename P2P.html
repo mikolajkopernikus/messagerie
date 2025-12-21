@@ -268,7 +268,7 @@
             <div class="status-indicator" id="statusIndicator"></div>
             <div>
                 <strong id="statusText">Déconnecté</strong>
-                <span class="encryption-badge" id="encryptionBadge" style="display: none;">🔒 AES-256</span>
+                <span class="encryption-badge" id="encryptionBadge" style="display: none;">🔒 ECDH P-384</span>
             </div>
         </div>
 
@@ -316,19 +316,43 @@
         let peer = null;
         let conn = null;
         let encryptionKey = null;
-        let isInitiator = false; // Pour savoir qui génère la clé
+        let myKeyPair = null; // Ma paire de clés ECDH
+        let otherPublicKey = null; // Clé publique de l'autre peer
 
-        // Génération d'une clé de cryptage symétrique (AES-256)
-        async function generateEncryptionKey() {
-            const key = await crypto.subtle.generateKey(
-                { name: 'AES-GCM', length: 256 },
+        // Génération d'une paire de clés ECDH (cryptage asymétrique)
+        async function generateKeyPair() {
+            const keyPair = await crypto.subtle.generateKey(
+                {
+                    name: 'ECDH',
+                    namedCurve: 'P-384' // Courbe elliptique sécurisée
+                },
                 true,
-                ['encrypt', 'decrypt']
+                ['deriveKey']
             );
-            return key;
+            console.log('Paire de clés ECDH générée');
+            return keyPair;
         }
 
-        // Cryptage d'un message
+        // Dériver une clé AES partagée à partir de ma clé privée et la clé publique de l'autre
+        async function deriveSharedKey(myPrivateKey, theirPublicKey) {
+            const sharedKey = await crypto.subtle.deriveKey(
+                {
+                    name: 'ECDH',
+                    public: theirPublicKey
+                },
+                myPrivateKey,
+                {
+                    name: 'AES-GCM',
+                    length: 256
+                },
+                false,
+                ['encrypt', 'decrypt']
+            );
+            console.log('Clé partagée dérivée avec succès');
+            return sharedKey;
+        }
+
+        // Cryptage d'un message avec AES-GCM
         async function encryptMessage(message, key) {
             const encoder = new TextEncoder();
             const data = encoder.encode(message);
@@ -369,29 +393,36 @@
             }
         }
 
-        // Export de la clé pour l'échange
-        async function exportKey(key) {
-            const exported = await crypto.subtle.exportKey('raw', key);
+        // Export de la clé publique pour l'échange
+        async function exportPublicKey(publicKey) {
+            const exported = await crypto.subtle.exportKey('spki', publicKey);
             return btoa(String.fromCharCode(...new Uint8Array(exported)));
         }
 
-        // Import de la clé reçue
-        async function importKey(keyData) {
+        // Import de la clé publique reçue
+        async function importPublicKey(keyData) {
             const rawKey = Uint8Array.from(atob(keyData), c => c.charCodeAt(0));
             return await crypto.subtle.importKey(
-                'raw',
+                'spki',
                 rawKey,
-                { name: 'AES-GCM' },
+                {
+                    name: 'ECDH',
+                    namedCurve: 'P-384'
+                },
                 true,
-                ['encrypt', 'decrypt']
+                []
             );
         }
 
         // Initialiser PeerJS
-        function initializePeer() {
+        async function initializePeer() {
             const initBtn = document.getElementById('initBtn');
             initBtn.disabled = true;
             initBtn.textContent = '⏳ Initialisation...';
+
+            // Générer la paire de clés ECDH dès le début
+            myKeyPair = await generateKeyPair();
+            console.log('Paire de clés ECDH créée');
 
             // Générer un ID aléatoire simple
             const randomId = 'user-' + Math.random().toString(36).substr(2, 9);
@@ -448,8 +479,6 @@
 
             updateStatus('Connexion en cours...', false);
             
-            isInitiator = true; // Celui qui se connecte est l'initiateur
-            
             conn = peer.connect(remotePeerId, {
                 reliable: true
             });
@@ -466,41 +495,38 @@
                 document.getElementById('disconnectBtn').style.display = 'block';
                 document.getElementById('encryptionBadge').style.display = 'inline-block';
 
-                // Seul l'initiateur génère et partage la clé
-                if (isInitiator) {
-                    encryptionKey = await generateEncryptionKey();
-                    const keyData = await exportKey(encryptionKey);
-                    
-                    // Envoyer la clé à l'autre peer
-                    conn.send({ type: 'key', data: keyData });
-                    console.log('Clé générée et envoyée (initiateur)');
-                    addSystemMessage('🔐 Clé de cryptage envoyée...');
-                } else {
-                    console.log('En attente de la clé (récepteur)');
-                    addSystemMessage('🔐 En attente de la clé de cryptage...');
-                }
+                // Exporter et envoyer ma clé publique à l'autre peer
+                const myPublicKeyData = await exportPublicKey(myKeyPair.publicKey);
+                conn.send({ type: 'public-key', data: myPublicKeyData });
+                console.log('Clé publique ECDH envoyée');
+                addSystemMessage('🔐 Échange de clés en cours...');
             });
 
             conn.on('data', async (data) => {
                 console.log('Données reçues:', data.type);
                 
-                if (data.type === 'key') {
-                    // Recevoir la clé de l'autre peer
+                if (data.type === 'public-key') {
+                    // Recevoir la clé publique de l'autre peer
                     try {
-                        encryptionKey = await importKey(data.data);
-                        console.log('Clé reçue et importée avec succès');
-                        addSystemMessage('🔐 Connexion établie et cryptée !');
+                        otherPublicKey = await importPublicKey(data.data);
+                        console.log('Clé publique de l\'autre peer reçue');
                         
-                        // Envoyer confirmation que la clé est bien reçue
-                        conn.send({ type: 'key-ack' });
+                        // Dériver la clé partagée
+                        encryptionKey = await deriveSharedKey(myKeyPair.privateKey, otherPublicKey);
+                        console.log('Clé partagée dérivée avec ECDH P-384');
+                        
+                        addSystemMessage('🔐 Connexion établie et cryptée (ECDH P-384) !');
+                        
+                        // Envoyer confirmation
+                        conn.send({ type: 'key-ready' });
                     } catch (e) {
-                        console.error('Erreur import clé:', e);
-                        addSystemMessage('⚠️ Erreur lors de l\'import de la clé');
+                        console.error('Erreur échange de clés:', e);
+                        addSystemMessage('⚠️ Erreur lors de l\'échange de clés');
                     }
-                } else if (data.type === 'key-ack') {
-                    // Confirmation que l'autre peer a bien reçu la clé
-                    console.log('Confirmation de réception de la clé');
-                    addSystemMessage('🔐 Connexion établie et cryptée !');
+                } else if (data.type === 'key-ready') {
+                    // L'autre peer a terminé le dérivation de clé
+                    console.log('Confirmation: l\'autre peer est prêt');
+                    addSystemMessage('🔐 Connexion établie et cryptée (ECDH P-384) !');
                 } else if (data.type === 'message') {
                     // Attendre que la clé soit disponible
                     if (!encryptionKey) {
@@ -638,6 +664,8 @@
             document.getElementById('messages').innerHTML = '';
             document.getElementById('encryptionBadge').style.display = 'none';
             encryptionKey = null;
+            myKeyPair = null;
+            otherPublicKey = null;
         }
 
         // Enregistrer le Service Worker pour PWA
