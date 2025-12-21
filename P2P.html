@@ -290,7 +290,7 @@
 
             <div class="input-group">
                 <label>ID de votre correspondant</label>
-                <input type="text" id="remotePeerId" placeholder="Entrez l'ID à contacter">
+                <input type="text" id="remotePeerId" placeholder="Entrez l'ID à contacter" oninput="this.value = this.value.toLowerCase()">
             </div>
 
             <button class="btn btn-primary" id="connectBtn" onclick="connectToPeer()" disabled>
@@ -318,6 +318,24 @@
         let encryptionKey = null;
         let myKeyPair = null; // Ma paire de clés ECDH
         let otherPublicKey = null; // Clé publique de l'autre peer
+
+        // Calculer la lettre de contrôle (checksum)
+        function calculateChecksum(id) {
+            let sum = 0;
+            for (let i = 0; i < id.length; i++) {
+                sum += id.charCodeAt(i);
+            }
+            const checkChar = String.fromCharCode(97 + (sum % 26)); // a-z
+            return checkChar;
+        }
+
+        // Vérifier la lettre de contrôle
+        function verifyChecksum(idWithCheck) {
+            if (idWithCheck.length < 2) return false;
+            const id = idWithCheck.slice(0, -1);
+            const checkChar = idWithCheck.slice(-1);
+            return calculateChecksum(id) === checkChar;
+        }
 
         // Génération d'une paire de clés ECDH (cryptage asymétrique)
         async function generateKeyPair() {
@@ -424,8 +442,11 @@
             myKeyPair = await generateKeyPair();
             console.log('Paire de clés ECDH créée');
 
-            // Générer un ID aléatoire simple
-            const randomId = 'user-' + Math.random().toString(36).substr(2, 9);
+            // Générer un ID aléatoire simple avec lettre de contrôle
+            const baseId = 'user-' + Math.random().toString(36).substr(2, 9);
+            const checkChar = calculateChecksum(baseId);
+            const randomId = baseId + checkChar;
+            console.log('ID généré avec checksum:', randomId);
             
             // Utiliser le serveur officiel de PeerJS
             peer = new Peer(randomId, {
@@ -465,10 +486,16 @@
 
         // Se connecter à un peer
         async function connectToPeer() {
-            const remotePeerId = document.getElementById('remotePeerId').value.trim();
+            const remotePeerId = document.getElementById('remotePeerId').value.trim().toLowerCase();
             
             if (!remotePeerId) {
                 alert('Veuillez entrer un ID valide');
+                return;
+            }
+
+            // Vérifier la lettre de contrôle
+            if (!verifyChecksum(remotePeerId)) {
+                alert('⚠️ ID invalide : la lettre de contrôle ne correspond pas.\nVérifiez que vous avez correctement copié l\'ID.');
                 return;
             }
 
