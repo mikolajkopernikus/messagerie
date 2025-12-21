@@ -319,7 +319,7 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>🔐 Messagerie Point à Point Cryptée <span style="font-size: 0.4em;">v0.30</span></h1>
+            <h1>🔐 Messagerie Point à Point Cryptée <span style="font-size: 0.4em;">v0.31</span></h1>
             <div class="header-info">
                 <span class="header-id" id="headerId"></span>
             </div>
@@ -406,7 +406,7 @@
         }
 
         // Initialiser les champs au chargement
-        window.addEventListener('DOMContentLoaded', async () => {
+        window.addEventListener('DOMContentLoaded', () => {
             console.log('Initialisation des champs depuis localStorage');
             console.log('myName:', myName, 'myStoredId:', myStoredId, 'remoteStoredId:', remoteStoredId);
             
@@ -416,14 +416,15 @@
                 nameField.value = myName;
             }
             
-            // Pré-remplir l'ID si existant ET réinitialiser automatiquement le peer
+            // Pré-remplir l'ID si existant (mais NE PAS réinitialiser le peer automatiquement)
             const myIdField = document.getElementById('myPeerId');
             if (myIdField && myStoredId) {
                 myIdField.value = formatId(myStoredId);
                 document.getElementById('initBtn').innerHTML = '🔄 Re-générer mon ID';
-                
-                // Réinitialiser automatiquement le peer avec l'ID conservé
-                await reinitializePeerWithStoredId();
+                // Activer le bouton de connexion si on a un ID
+                if (remoteStoredId) {
+                    document.getElementById('connectBtn').disabled = false;
+                }
             }
             
             // Pré-remplir l'ID du contact si existant
@@ -693,9 +694,18 @@
             remoteStoredId = remotePeerId;
             localStorage.setItem('remotePeerId', remotePeerId);
 
+            // Si pas de peer, créer un peer avec l'ID conservé
             if (!peer) {
-                alert('Veuillez d\'abord initialiser votre connexion');
-                return;
+                if (myStoredId) {
+                    console.log('Création du peer avec ID conservé avant connexion');
+                    await reinitializePeerWithStoredId();
+                    // Attendre 0.5 secondes que le peer s'enregistre sur le serveur
+                    console.log('Attente de 0.5s pour l\'enregistrement sur le serveur...');
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                } else {
+                    alert('Veuillez d\'abord générer votre ID');
+                    return;
+                }
             }
 
             updateStatus('Connexion en cours...', false);
