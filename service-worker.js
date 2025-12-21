@@ -1,8 +1,8 @@
 // Service Worker pour PWA
 const CACHE_NAME = 'peerjs-chat-v1';
 const urlsToCache = [
-  '/peerjs-chat/peerjs-chat.html',
-  '/peerjs-chat/',
+  '/messagerie/P2P.html',
+  '/messagerie/',
   'https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js'
 ];
 

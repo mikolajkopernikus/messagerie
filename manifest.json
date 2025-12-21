@@ -2,11 +2,11 @@
   "name": "Chat P2P Crypté",
   "short_name": "P2P Chat",
   "description": "Application de chat peer-to-peer avec cryptage de bout en bout",
-  "start_url": "./peerjs-chat.html",
+  "start_url": "./P2P.html",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#667eea",
-  "theme_color": "#667eea",
+  "background_color": "#2c3e50",
+  "theme_color": "#2c3e50",
   "orientation": "portrait",
   "icons": [
     {
