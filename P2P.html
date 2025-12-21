@@ -303,7 +303,7 @@
         <div class="header">
             <h1>🔐 Messagerie Point à Point Cryptée</h1>
             <div class="header-info">
-                <span class="header-version">v0.21</span>
+                <span class="header-version">v0.22</span>
                 <span class="header-id" id="headerId"></span>
             </div>
         </div>
@@ -319,25 +319,25 @@
         <!-- Panel de connexion -->
         <div class="connection-panel" id="connectionPanel">
             <div class="info-box">
-                <strong>Mode 1 :</strong> Génère votre ID et partagez-le.<br>
-                <strong>Mode 2 :</strong> Entrez l'ID de votre ami pour vous connecter.
+                <strong>Étape 1 :</strong> Générez votre ID et partagez-le.<br>
+                <strong>Étape 2 :</strong> Entrez l'ID de votre contact pour se connecter.
             </div>
 
             <div class="input-group inline">
                 <label>Votre nom (facultatif)</label>
-                <input type="text" id="myName" placeholder="Entrez votre nom" maxlength="20" style="width: 22ch;">
+                <input type="text" id="myName" placeholder="Entrez votre nom" maxlength="20" style="width: 20ch;">
             </div>
 
             <div class="input-group">
-                <label>Votre ID (généré automatiquement) <input type="text" id="myPeerId" readonly placeholder="Cliquez sur Initialiser..." style="width: 18ch;"></label>
+                <label>Votre ID (auto-généré) <input type="text" id="myPeerId" readonly placeholder="Cliquez sur générer" style="width: 21ch;"></label>
             </div>
 
             <button class="btn btn-primary" id="initBtn" onclick="initializePeer()">
-                🚀 Initialiser ma connexion
+                🚀 générer mon ID
             </button>
 
             <div class="input-group">
-                <label>ID de votre correspondant <input type="text" id="remotePeerId" placeholder="Entrez l'ID à contacter" oninput="this.value = this.value.toLowerCase()" style="width: 18ch;"></label>
+                <label>ID de votre contact <input type="text" id="remotePeerId" placeholder="Entrez ID du contact" oninput="this.value = this.value.toLowerCase()" style="width: 20ch;"></label>
             </div>
 
             <button class="btn btn-primary" id="connectBtn" onclick="connectToPeer()" disabled>
