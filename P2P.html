@@ -293,6 +293,24 @@
             margin-left: 10px;
         }
 
+        .disconnect-badge {
+            display: inline-block;
+            background: #dc3545;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-left: 10px;
+            cursor: pointer;
+            border: none;
+            transition: background 0.2s;
+        }
+
+        .disconnect-badge:hover {
+            background: #c82333;
+        }
+
         .hidden {
             display: none !important;
         }
@@ -301,7 +319,7 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>🔐 Messagerie Point à Point Cryptée <span style="font-size: 0.4em;">v0.26</span></h1>
+            <h1>🔐 Messagerie Point à Point Cryptée <span style="font-size: 0.4em;">v0.27</span></h1>
             <div class="header-info">
                 <span class="header-id" id="headerId"></span>
             </div>
@@ -312,6 +330,7 @@
             <div>
                 <strong id="statusText">Déconnecté</strong>
                 <span class="encryption-badge" id="encryptionBadge" style="display: none;">🔒 ECDH P-384</span>
+                <button class="disconnect-badge" id="disconnectBadge" style="display: none;" onclick="disconnect()">❌ Se déconnecter</button>
             </div>
         </div>
 
@@ -624,6 +643,7 @@
                 document.getElementById('chatContainer').classList.add('active');
                 document.getElementById('disconnectBtn').style.display = 'block';
                 document.getElementById('encryptionBadge').style.display = 'inline-block';
+                document.getElementById('disconnectBadge').style.display = 'inline-block';
 
                 // Exporter et envoyer ma clé publique à l'autre peer
                 const myPublicKeyData = await exportPublicKey(myKeyPair.publicKey);
@@ -803,6 +823,7 @@
             document.getElementById('chatContainer').classList.remove('active');
             document.getElementById('messages').innerHTML = '';
             document.getElementById('encryptionBadge').style.display = 'none';
+            document.getElementById('disconnectBadge').style.display = 'none';
             encryptionKey = null;
             myKeyPair = null;
             otherPublicKey = null;
