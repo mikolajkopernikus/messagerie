@@ -301,7 +301,7 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>🔐 Messagerie Point à Point Cryptée <span style="font-size: 0.4em;">v0.24</span></h1>
+            <h1>🔐 Messagerie Point à Point Cryptée <span style="font-size: 0.4em;">v0.25</span></h1>
             <div class="header-info">
                 <span class="header-id" id="headerId"></span>
             </div>
@@ -324,11 +324,11 @@
 
             <div class="input-group inline">
                 <label>Votre nom <span style="font-size: 0.85em;">(optionnel)</span></label>
-                <input type="text" id="myName" placeholder="Entrez votre nom" maxlength="18" style="width: 20ch;">
+                <input type="text" id="myName" placeholder="Entrez votre nom" maxlength="18" style="width: 13ch;">
             </div>
 
             <div class="input-group">
-                <label>Votre ID (auto-généré) <input type="text" id="myPeerId" readonly placeholder="Cliquez sur générer" style="width: 21ch;"></label>
+                <label>Votre ID <span style="font-size: 0.85em;">(auto-généré)</span> <input type="text" id="myPeerId" readonly placeholder="Cliquez sur générer" style="width: 23ch;"></label>
             </div>
 
             <button class="btn btn-primary" id="initBtn" onclick="initializePeer()">
@@ -336,7 +336,7 @@
             </button>
 
             <div class="input-group">
-                <label>ID de votre contact <input type="text" id="remotePeerId" placeholder="Entrez ID du contact" oninput="this.value = this.value.toLowerCase()" style="width: 20ch;"></label>
+                <label>ID de votre contact <input type="text" id="remotePeerId" placeholder="entrez ID de votre contact" oninput="this.value = this.value.toLowerCase()" style="width: 23ch;"></label>
             </div>
 
             <button class="btn btn-primary" id="connectBtn" onclick="connectToPeer()" disabled>
