@@ -319,7 +319,7 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>🔐 Messagerie Point à Point Cryptée <span style="font-size: 0.4em;">v0.32</span></h1>
+            <h1>🔐 Messagerie Point à Point Cryptée <span style="font-size: 0.4em;">v0.30</span></h1>
             <div class="header-info">
                 <span class="header-id" id="headerId"></span>
             </div>
@@ -717,15 +717,27 @@
                 document.getElementById('encryptionBadge').style.display = 'inline-block';
                 document.getElementById('disconnectBadge').style.display = 'inline-block';
 
+                // Vérifier que la paire de clés ECDH existe
+                if (!myKeyPair) {
+                    console.error('Erreur: paire de clés ECDH non initialisée');
+                    addSystemMessage('⚠️ Erreur: clés de chiffrement manquantes. Veuillez re-générer votre ID.');
+                    return;
+                }
+
                 // Exporter et envoyer ma clé publique à l'autre peer
-                const myPublicKeyData = await exportPublicKey(myKeyPair.publicKey);
-                conn.send({ type: 'public-key', data: myPublicKeyData });
-                
-                // Envoyer mon nom
-                conn.send({ type: 'name', data: myName });
-                
-                console.log('Clé publique ECDH et nom envoyés');
-                addSystemMessage('🔐 Échange de clés en cours...');
+                try {
+                    const myPublicKeyData = await exportPublicKey(myKeyPair.publicKey);
+                    conn.send({ type: 'public-key', data: myPublicKeyData });
+                    
+                    // Envoyer mon nom
+                    conn.send({ type: 'name', data: myName });
+                    
+                    console.log('Clé publique ECDH et nom envoyés');
+                    addSystemMessage('🔐 Échange de clés en cours...');
+                } catch (e) {
+                    console.error('Erreur lors de l\'export de la clé:', e);
+                    addSystemMessage('⚠️ Erreur lors de l\'export de la clé publique');
+                }
             });
 
             conn.on('data', async (data) => {
@@ -739,8 +751,14 @@
                 } else if (data.type === 'public-key') {
                     // Recevoir la clé publique de l'autre peer
                     try {
+                        console.log('Réception de la clé publique de l\'autre peer...');
+                        
+                        if (!myKeyPair) {
+                            throw new Error('Ma paire de clés ECDH n\'est pas initialisée');
+                        }
+                        
                         otherPublicKey = await importPublicKey(data.data);
-                        console.log('Clé publique de l\'autre peer reçue');
+                        console.log('Clé publique de l\'autre peer importée avec succès');
                         
                         // Dériver la clé partagée
                         encryptionKey = await deriveSharedKey(myKeyPair.privateKey, otherPublicKey);
@@ -752,7 +770,7 @@
                         conn.send({ type: 'key-ready' });
                     } catch (e) {
                         console.error('Erreur échange de clés:', e);
-                        addSystemMessage('⚠️ Erreur lors de l\'échange de clés');
+                        addSystemMessage('⚠️ Erreur lors de l\'échange de clés: ' + e.message);
                     }
                 } else if (data.type === 'key-ready') {
                     // L'autre peer a terminé le dérivation de clé
@@ -781,8 +799,11 @@
 
             conn.on('close', () => {
                 updateStatus('Déconnecté', false);
-                addSystemMessage('❌ Connexion fermée');
-                resetChat();
+                addSystemMessage('❌ Connexion fermée par le correspondant');
+                // Recharger la page pour réinitialiser proprement
+                setTimeout(() => {
+                    location.reload();
+                }, 2000); // Attendre 2 secondes pour que l'utilisateur voie le message
             });
 
             conn.on('error', (err) => {
