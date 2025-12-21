@@ -64,8 +64,11 @@
         .header-id {
             font-size: 11px;
             color: #4CAF50;
-            font-weight: 600;
             display: none;
+        }
+
+        .header-id strong {
+            font-weight: 700;
         }
 
         .status {
@@ -284,7 +287,7 @@
         <div class="header">
             <h1>🔐 Messagerie Point à Point Cryptée</h1>
             <div class="header-info">
-                <span class="header-version">v0.13</span>
+                <span class="header-version">v0.14</span>
                 <span class="header-id" id="headerId"></span>
             </div>
         </div>
@@ -344,14 +347,33 @@
         let myKeyPair = null; // Ma paire de clés ECDH
         let otherPublicKey = null; // Clé publique de l'autre peer
 
-        // Calculer la lettre de contrôle (checksum)
+        // Consonnes et voyelles
+        const consonnes = 'bcdfghjklmnpqrstvwxz';
+        const voyelles = 'aeiouy';
+
+        // Générer un ID avec alternance consonne-voyelle (8 caractères)
+        function generateReadableId() {
+            let id = '';
+            for (let i = 0; i < 8; i++) {
+                if (i % 2 === 0) {
+                    // Consonne
+                    id += consonnes[Math.floor(Math.random() * consonnes.length)];
+                } else {
+                    // Voyelle
+                    id += voyelles[Math.floor(Math.random() * voyelles.length)];
+                }
+            }
+            return id;
+        }
+
+        // Calculer la lettre de contrôle (checksum) - retourne une consonne
         function calculateChecksum(id) {
             let sum = 0;
             for (let i = 0; i < id.length; i++) {
                 sum += id.charCodeAt(i);
             }
-            const checkChar = String.fromCharCode(97 + (sum % 26)); // a-z
-            return checkChar;
+            const consonneIndex = sum % consonnes.length;
+            return consonnes[consonneIndex];
         }
 
         // Vérifier la lettre de contrôle
@@ -467,11 +489,11 @@
             myKeyPair = await generateKeyPair();
             console.log('Paire de clés ECDH créée');
 
-            // Générer un ID aléatoire simple avec lettre de contrôle
-            const baseId = 'user-' + Math.random().toString(36).substr(2, 9);
+            // Générer un ID lisible avec alternance consonne-voyelle
+            const baseId = generateReadableId();
             const checkChar = calculateChecksum(baseId);
             const randomId = baseId + checkChar;
-            console.log('ID généré avec checksum:', randomId);
+            console.log('ID généré (9 car. avec checksum):', randomId);
             
             // Utiliser le serveur officiel de PeerJS
             peer = new Peer(randomId, {
@@ -493,9 +515,9 @@
                 updateStatus('En attente de connexion...', false);
                 initBtn.textContent = '✅ Initialisé';
                 
-                // Afficher l'ID dans le header
+                // Afficher l'ID dans le header avec préfixe "ID:"
                 const headerIdElement = document.getElementById('headerId');
-                headerIdElement.textContent = id;
+                headerIdElement.innerHTML = '<strong>ID:</strong> ' + id;
                 headerIdElement.style.display = 'block';
                 
                 console.log('Mon Peer ID:', id);
