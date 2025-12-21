@@ -319,7 +319,7 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>🔐 Messagerie Point à Point Cryptée <span style="font-size: 0.4em;">v0.27</span></h1>
+            <h1>🔐 Messagerie Point à Point Cryptée <span style="font-size: 0.4em;">v0.28</span></h1>
             <div class="header-info">
                 <span class="header-id" id="headerId"></span>
             </div>
@@ -383,7 +383,7 @@
         let encryptionKey = null;
         let myKeyPair = null; // Ma paire de clés ECDH
         let otherPublicKey = null; // Clé publique de l'autre peer
-        let myName = localStorage.getItem('myName') || 'Anonyme'; // Nom permanent
+        let myName = localStorage.getItem('myName') || ''; // Nom permanent
         let remoteName = ''; // Nom du correspondant
         let myStoredId = localStorage.getItem('myPeerId') || ''; // ID conservé
         let remoteStoredId = localStorage.getItem('remotePeerId') || ''; // ID contact conservé
@@ -392,20 +392,42 @@
         const consonnes = 'bcdfghjklmnpqrstvwxz';
         const voyelles = 'aeiouy';
 
+        // Formater l'ID avec espaces: xxxx xxxx xx
+        // Format: 4 lettres, espace, 4 lettres, espace, 2 lettres
+        // Exemple: bokaletufr -> boka letu fr
+        function formatId(id) {
+            if (id.length < 10) return id;
+            return id.slice(0, 4) + ' ' + id.slice(4, 8) + ' ' + id.slice(8);
+        }
+
+        // Retirer les espaces d'un ID
+        function unformatId(id) {
+            return id.replace(/\s/g, '');
+        }
+
         // Initialiser les champs au chargement
         window.addEventListener('DOMContentLoaded', () => {
+            console.log('Initialisation des champs depuis localStorage');
+            console.log('myName:', myName, 'myStoredId:', myStoredId, 'remoteStoredId:', remoteStoredId);
+            
             // Pré-remplir le nom
-            if (myName && myName !== 'Anonyme') {
-                document.getElementById('myName').value = myName;
+            const nameField = document.getElementById('myName');
+            if (nameField && myName) {
+                nameField.value = myName;
             }
+            
             // Pré-remplir l'ID si existant
-            if (myStoredId) {
-                document.getElementById('myPeerId').value = formatId(myStoredId);
+            const myIdField = document.getElementById('myPeerId');
+            if (myIdField && myStoredId) {
+                myIdField.value = formatId(myStoredId);
                 document.getElementById('initBtn').innerHTML = '🔄 Re-générer mon ID';
+                document.getElementById('connectBtn').disabled = false;
             }
+            
             // Pré-remplir l'ID du contact si existant
-            if (remoteStoredId) {
-                document.getElementById('remotePeerId').value = formatId(remoteStoredId);
+            const remoteIdField = document.getElementById('remotePeerId');
+            if (remoteIdField && remoteStoredId) {
+                remoteIdField.value = formatId(remoteStoredId);
             }
         });
 
@@ -424,19 +446,6 @@
                 }
             }
             return id;
-        }
-
-        // Formater l'ID avec espaces: xxxx xxxx xx
-        // Format: 4 lettres, espace, 4 lettres, espace, 2 lettres
-        // Exemple: bokaletufr -> boka letu fr
-        function formatId(id) {
-            if (id.length < 10) return id;
-            return id.slice(0, 4) + ' ' + id.slice(4, 8) + ' ' + id.slice(8);
-        }
-
-        // Retirer les espaces d'un ID
-        function unformatId(id) {
-            return id.replace(/\s/g, '');
         }
 
         // Génération d'une paire de clés ECDH (cryptage asymétrique)
@@ -540,11 +549,14 @@
             initBtn.disabled = true;
             initBtn.textContent = '⏳ Initialisation...';
 
-            // Sauvegarder le nom s'il a été modifié
+            // Sauvegarder le nom (même s'il est vide)
             const nameInput = document.getElementById('myName');
-            if (nameInput.value.trim()) {
-                myName = nameInput.value.trim();
-                localStorage.setItem('myName', myName);
+            myName = nameInput.value.trim();
+            localStorage.setItem('myName', myName);
+
+            // Si un peer existe déjà, le détruire avant d'en créer un nouveau
+            if (peer) {
+                peer.destroy();
             }
 
             // Générer la paire de clés ECDH dès le début
@@ -603,7 +615,12 @@
                 console.error('Erreur PeerJS:', err);
                 alert('Erreur: ' + err.message);
                 initBtn.disabled = false;
-                initBtn.textContent = '🚀 Initialiser ma connexion';
+                // Restaurer le texte du bouton selon le contexte
+                if (myStoredId) {
+                    initBtn.innerHTML = '🔄 Re-générer mon ID';
+                } else {
+                    initBtn.innerHTML = '🚀 générer mon ID';
+                }
             });
         }
 
