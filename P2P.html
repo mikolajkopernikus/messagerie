@@ -425,7 +425,7 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>🔐 Canal privé chiffré <span style="font-size: 0.4em;">v0.48</span></h1>
+            <h1>🔐 Canal privé chiffré <span style="font-size: 0.4em;">v0.50</span></h1>
             <div class="header-info">
                 <span class="header-id" id="headerId"></span>
             </div>
@@ -939,7 +939,7 @@
             connectBtn.disabled = false; // Activer le bouton
             connectBtn.removeAttribute('disabled'); // FORCER le retrait de l'attribut disabled
             console.log('🔧 APRÈS: connectBtn.disabled =', connectBtn.disabled);
-            console.log('🔧 Bouton doit être ACTIF maintenant - version v0.48');
+            console.log('🔧 Bouton doit être ACTIF maintenant - version v0.50');
             isConnecting = true;
             
             // Désactiver le champ ID du contact pendant la connexion
@@ -1052,6 +1052,11 @@
 
             conn.on('data', async (data) => {
                 console.log('Données reçues:', data.type);
+                
+                // Ignorer les keepalive
+                if (data.type === 'keepalive') {
+                    return;
+                }
                 
                 if (data.type === 'name') {
                     // Recevoir le nom du correspondant
@@ -1224,10 +1229,54 @@
                 return;
             }
 
+            // Vérifier que la connexion est toujours ouverte
+            if (!conn.open) {
+                alert('⚠️ La connexion chat est fermée. Reconnectez-vous.');
+                return;
+            }
+
+            // Keepalive pour maintenir la connexion pendant demande permission
+            let keepaliveInterval = null;
+            
             try {
                 console.log('Demande d\'accès au microphone...');
-                localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                console.log('Microphone activé, démarrage de l\'appel...');
+                addSystemMessage('🎤 Autorisation microphone requise...');
+                
+                // Envoyer des pings réguliers pour garder connexion active
+                keepaliveInterval = setInterval(() => {
+                    if (conn && conn.open) {
+                        try {
+                            conn.send({ type: 'keepalive', timestamp: Date.now() });
+                            console.log('Keepalive envoyé');
+                        } catch (e) {
+                            console.warn('Erreur keepalive:', e);
+                        }
+                    }
+                }, 2000); // Ping toutes les 2 secondes
+                
+                // Demander permission microphone
+                localStream = await navigator.mediaDevices.getUserMedia({ 
+                    audio: {
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        autoGainControl: true
+                    }
+                });
+                
+                // Arrêter le keepalive
+                if (keepaliveInterval) {
+                    clearInterval(keepaliveInterval);
+                    keepaliveInterval = null;
+                }
+                
+                console.log('Microphone activé');
+                
+                // Vérifier la connexion après permission
+                if (!conn || !conn.open) {
+                    throw new Error('Connexion perdue pendant l\'accès au microphone');
+                }
+                
+                console.log('Démarrage de l\'appel...');
                 
                 // Appeler le peer distant
                 mediaCall = peer.call(remoteStoredId, localStream);
@@ -1263,7 +1312,7 @@
 
                 mediaCall.on('error', (err) => {
                     console.error('Erreur d\'appel:', err);
-                    addSystemMessage('⚠️ Erreur lors de l\'appel vocal');
+                    addSystemMessage('⚠️ Erreur lors de l\'appel vocal: ' + err.message);
                     endVoiceCall();
                 });
 
@@ -1276,18 +1325,84 @@
                 addSystemMessage('🎤 Appel vocal démarré');
                 console.log('Appel vocal actif');
             } catch (err) {
-                console.error('Erreur accès microphone:', err);
-                alert('❌ Impossible d\'accéder au microphone.\n\nVérifiez que :\n• Vous avez autorisé l\'accès au micro\n• Votre micro fonctionne\n• Aucune autre application n\'utilise le micro');
+                console.error('Erreur appel vocal:', err);
+                
+                // Arrêter le keepalive en cas d'erreur
+                if (keepaliveInterval) {
+                    clearInterval(keepaliveInterval);
+                    keepaliveInterval = null;
+                }
+                
+                // Nettoyer le flux si créé
+                if (localStream) {
+                    localStream.getTracks().forEach(track => track.stop());
+                    localStream = null;
+                }
+                
+                let errorMsg = '❌ Impossible de démarrer l\'appel vocal.\n\n';
+                
+                if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+                    errorMsg += 'Permission micro refusée.\nAutorisez l\'accès au microphone dans les paramètres.';
+                } else if (err.name === 'NotFoundError') {
+                    errorMsg += 'Aucun microphone détecté.\nVérifiez votre matériel.';
+                } else if (err.message && err.message.includes('Connexion perdue')) {
+                    errorMsg += 'Connexion perdue pendant l\'accès au micro.\nReconnectez-vous et réessayez.';
+                } else if (err.message && err.message.includes('Timeout')) {
+                    errorMsg += 'Délai d\'attente dépassé.\nVérifiez les permissions et réessayez.';
+                } else {
+                    errorMsg += 'Erreur: ' + err.message;
+                }
+                
+                alert(errorMsg);
+                addSystemMessage('⚠️ Échec démarrage appel vocal');
             }
         }
 
         // Répondre à un appel vocal entrant
         async function answerVoiceCall(call) {
+            // Keepalive pour maintenir la connexion
+            let keepaliveInterval = null;
+            
             try {
                 console.log('Réponse à l\'appel entrant...');
+                addSystemMessage('🎤 Appel entrant, autorisation micro...');
+                
+                // Vérifier la connexion
+                if (!conn || !conn.open) {
+                    throw new Error('Connexion fermée');
+                }
+                
+                // Keepalive pendant demande permission
+                keepaliveInterval = setInterval(() => {
+                    if (conn && conn.open) {
+                        try {
+                            conn.send({ type: 'keepalive', timestamp: Date.now() });
+                            console.log('Keepalive envoyé (réponse)');
+                        } catch (e) {
+                            console.warn('Erreur keepalive:', e);
+                        }
+                    }
+                }, 2000);
                 
                 // Demander accès au microphone
-                localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                localStream = await navigator.mediaDevices.getUserMedia({ 
+                    audio: {
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        autoGainControl: true
+                    }
+                });
+                
+                // Arrêter keepalive
+                if (keepaliveInterval) {
+                    clearInterval(keepaliveInterval);
+                    keepaliveInterval = null;
+                }
+                
+                // Vérifier connexion
+                if (!conn || !conn.open) {
+                    throw new Error('Connexion perdue pendant l\'accès au microphone');
+                }
                 
                 // Répondre à l'appel avec notre flux audio
                 call.answer(localStream);
@@ -1333,7 +1448,31 @@
                 console.log('Appel vocal actif (entrant)');
             } catch (err) {
                 console.error('Erreur réponse appel:', err);
-                alert('❌ Impossible de répondre à l\'appel.\nVérifiez l\'accès à votre microphone.');
+                
+                // Arrêter keepalive
+                if (keepaliveInterval) {
+                    clearInterval(keepaliveInterval);
+                    keepaliveInterval = null;
+                }
+                
+                // Nettoyer
+                if (localStream) {
+                    localStream.getTracks().forEach(track => track.stop());
+                    localStream = null;
+                }
+                
+                let errorMsg = '❌ Impossible de répondre à l\'appel.\n\n';
+                
+                if (err.name === 'NotAllowedError') {
+                    errorMsg += 'Permission micro refusée.';
+                } else if (err.message && err.message.includes('Connexion')) {
+                    errorMsg += 'Connexion perdue. Reconnectez-vous.';
+                } else {
+                    errorMsg += 'Erreur: ' + err.message;
+                }
+                
+                alert(errorMsg);
+                addSystemMessage('⚠️ Échec réponse appel');
             }
         }
 
@@ -1502,6 +1641,7 @@
     </script>
 </body>
 </html>
+
 
 
 
