@@ -339,7 +339,7 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>🔐 Messagerie Point à Point Cryptée <span style="font-size: 0.4em;">v0.34</span></h1>
+            <h1>🔐 Messagerie Point à Point Cryptée <span style="font-size: 0.4em;">v0.35</span></h1>
             <div class="header-info">
                 <span class="header-id" id="headerId"></span>
             </div>
@@ -1050,26 +1050,71 @@
             
             if (conn) {
                 conn.close();
+                conn = null;
             }
             if (peer) {
                 peer.destroy();
+                peer = null;
             }
             resetChat();
-            // Recharger la page pour revenir à l'accueil avec l'ID pré-renseigné
-            location.reload();
         }
 
         // Réinitialiser le chat
         function resetChat() {
+            // Revenir à l'écran de connexion
             document.getElementById('connectionPanel').classList.remove('hidden');
             document.getElementById('chatContainer').classList.remove('active');
             document.getElementById('messages').innerHTML = '';
             document.getElementById('encryptionBadge').style.display = 'none';
             document.getElementById('disconnectBadge').style.display = 'none';
-            document.getElementById('myPeerId').readOnly = false;
+            document.getElementById('disconnectBtn').style.display = 'none';
+            
+            // Réinitialiser les clés
             encryptionKey = null;
             myKeyPair = null;
             otherPublicKey = null;
+            remoteName = '';
+            
+            // Remettre les champs en lecture/écriture et pré-remplis
+            const myIdField = document.getElementById('myPeerId');
+            myIdField.readOnly = false;
+            if (myStoredId) {
+                myIdField.value = formatId(myStoredId);
+                const isValidLength = myStoredId.length >= 4 && myStoredId.length <= 14;
+                document.getElementById('registerBtn').disabled = !isValidLength;
+            }
+            
+            // Pré-remplir le nom
+            const nameField = document.getElementById('myName');
+            if (myName) {
+                nameField.value = myName;
+            }
+            
+            // Pré-remplir l'ID du contact
+            const remoteIdField = document.getElementById('remotePeerId');
+            if (remoteStoredId) {
+                remoteIdField.value = formatId(remoteStoredId);
+            }
+            
+            // Cacher l'ID du header
+            document.getElementById('headerId').style.display = 'none';
+            
+            // Remettre le statut à déconnecté
+            updateStatus('Déconnecté', 'disconnected');
+            
+            // Désactiver le bouton de connexion jusqu'à réenregistrement du peer
+            document.getElementById('connectBtn').disabled = true;
+            
+            // Remettre le texte des boutons
+            const registerBtn = document.getElementById('registerBtn');
+            registerBtn.textContent = '🚀 Ouvrir connexion et enregistrer ID';
+            
+            const connectBtn = document.getElementById('connectBtn');
+            if (myStoredId && remoteStoredId) {
+                connectBtn.textContent = '🔄 Se Re-connecter';
+            } else {
+                connectBtn.textContent = '📞 Se connecter';
+            }
         }
 
         // Enregistrer le Service Worker pour PWA
