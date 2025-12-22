@@ -343,7 +343,7 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>🔐 Messagerie Point à Point Cryptée <span style="font-size: 0.4em;">v0.39</span></h1>
+            <h1>🔐 Messagerie Point à Point Cryptée <span style="font-size: 0.4em;">v0.40</span></h1>
             <div class="header-info">
                 <span class="header-id" id="headerId"></span>
             </div>
@@ -1216,13 +1216,23 @@
                     nameInput.value = myName;
                 }
 
-                navigator.serviceWorker.register('./service-worker.js')
-                    .then((registration) => {
-                        console.log('Service Worker enregistré avec succès:', registration.scope);
-                    })
-                    .catch((error) => {
-                        console.log('Erreur d\'enregistrement du Service Worker:', error);
-                    });
+                // Désenregistrer tous les anciens service workers pour forcer la mise à jour
+                navigator.serviceWorker.getRegistrations().then((registrations) => {
+                    for (let registration of registrations) {
+                        registration.unregister();
+                    }
+                }).then(() => {
+                    // Enregistrer le nouveau service worker avec paramètre de version
+                    navigator.serviceWorker.register('./service-worker.js?v=39')
+                        .then((registration) => {
+                            console.log('Service Worker v39 enregistré avec succès:', registration.scope);
+                            // Forcer la mise à jour immédiate
+                            registration.update();
+                        })
+                        .catch((error) => {
+                            console.log('Erreur d\'enregistrement du Service Worker:', error);
+                        });
+                });
             });
         }
     </script>
