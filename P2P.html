@@ -185,6 +185,20 @@
             transform: none !important;
         }
 
+        .btn-inline {
+            width: auto;
+            padding: 8px 12px;
+            font-size: 14px;
+            margin: 0;
+            margin-left: 8px;
+        }
+
+        .id-input-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
         .chat-container {
             display: none;
             flex-direction: column;
@@ -325,7 +339,7 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>🔐 Messagerie Point à Point Cryptée <span style="font-size: 0.4em;">v0.32</span></h1>
+            <h1>🔐 Messagerie Point à Point Cryptée <span style="font-size: 0.4em;">v0.34</span></h1>
             <div class="header-info">
                 <span class="header-id" id="headerId"></span>
             </div>
@@ -343,8 +357,9 @@
         <!-- Panel de connexion -->
         <div class="connection-panel" id="connectionPanel">
             <div class="info-box">
-                <strong>Étape 1 :</strong> Générez votre ID et partagez-le.<br>
-                <strong>Étape 2 :</strong> Entrez l'ID de votre contact pour se connecter.
+                <strong>Étape 1 :</strong> Générez un ID aléatoire (10 car.) ou créez le vôtre (4-14 car.).<br>
+                <strong>Étape 2 :</strong> Ouvrez la connexion pour enregistrer votre ID sur le serveur.<br>
+                <strong>Étape 3 :</strong> Entrez l'ID de votre contact pour se connecter.
             </div>
 
             <div class="input-group inline">
@@ -353,15 +368,21 @@
             </div>
 
             <div class="input-group">
-                <label>Votre ID <span style="font-size: 0.85em;">(auto-généré)</span> <input type="text" id="myPeerId" readonly placeholder="Cliquez sur générer" style="width: 23ch;"></label>
+               
+                <div class="id-input-wrapper"> <label>Votre ID <span style="font-size: 0.85em;">(4-14 caractères)</span></label>
+                    <input type="text" id="myPeerId" placeholder="4 à 14 caractères" maxlength="18" oninput="this.value = this.value.toLowerCase()" style="width: 20ch;">
+                    <button class="btn btn-primary btn-inline" onclick="generateId()">
+                        🎲 Générer
+                    </button>
+                </div>
             </div>
 
-            <button class="btn btn-primary" id="initBtn" onclick="initializePeer()">
-                🚀 générer mon ID
+            <button class="btn btn-primary" id="registerBtn" onclick="registerPeer()" disabled>
+                🚀 Ouvrir connexion et enregistrer ID
             </button>
 
             <div class="input-group">
-                <label>ID de votre contact <input type="text" id="remotePeerId" placeholder="entrez ID de votre contact" oninput="this.value = this.value.toLowerCase()" style="width: 23ch;"></label>
+                <label>ID de votre contact <input type="text" id="remotePeerId" placeholder="4 à 14 caractères" maxlength="18" oninput="this.value = this.value.toLowerCase()" style="width: 23ch;"></label>
             </div>
 
             <button class="btn btn-primary" id="connectBtn" onclick="connectToPeer()" disabled>
@@ -399,12 +420,16 @@
         const consonnes = 'bcdfghjklmnpqrstvwxz';
         const voyelles = 'aeiouy';
 
-        // Formater l'ID avec espaces: xxxx xxxx xx
-        // Format: 4 lettres, espace, 4 lettres, espace, 2 lettres
-        // Exemple: bokaletufr -> boka letu fr
+        // Formater l'ID avec espaces tous les 4 caractères
+        // Exemples: abcd -> abcd, abcdefgh -> abcd efgh, bokaletufr -> boka letu fr
         function formatId(id) {
-            if (id.length < 10) return id;
-            return id.slice(0, 4) + ' ' + id.slice(4, 8) + ' ' + id.slice(8);
+            if (id.length <= 4) return id;
+            let formatted = '';
+            for (let i = 0; i < id.length; i++) {
+                if (i > 0 && i % 4 === 0) formatted += ' ';
+                formatted += id[i];
+            }
+            return formatted;
         }
 
         // Retirer les espaces d'un ID
@@ -443,26 +468,52 @@
             
             // Pré-remplir le nom
             const nameField = document.getElementById('myName');
-            if (nameField && myName) {
-                nameField.value = myName;
-            }
+            if (nameField && myName) { nameField.value = myName; }
             
-            // Pré-remplir l'ID si existant (mais NE PAS réinitialiser le peer automatiquement)
+            // Pré-remplir l'ID si existant
             const myIdField = document.getElementById('myPeerId');
             if (myIdField && myStoredId) {
                 myIdField.value = formatId(myStoredId);
-                document.getElementById('initBtn').innerHTML = '🔄 Re-générer mon ID';
-                // Activer le bouton de connexion si on a un ID
-                if (remoteStoredId) {
-                    document.getElementById('connectBtn').disabled = false;
+                // Activer le bouton d'enregistrement si l'ID est valide (4-14 caractères)
+                const isValidLength = myStoredId.length >= 4 && myStoredId.length <= 14;
+                document.getElementById('registerBtn').disabled = !isValidLength;
+                // Activer le bouton de connexion si on a aussi l'ID du contact
+                if (remoteStoredId) { 
+                    document.getElementById('connectBtn').disabled = false; 
                 }
             }
             
-            // Pré-remplir l'ID du contact si existant
+            // Activer le bouton registerBtn quand l'ID change (4-14 caractères acceptés)
+            myIdField.addEventListener('input', (e) => {
+                let rawValue = unformatId(e.target.value).trim();
+                // Limiter à 14 caractères sans espaces
+                if (rawValue.length > 14) {
+                    rawValue = rawValue.substring(0, 14);
+                }
+                // Auto-formater l'ID pendant la saisie
+                if (rawValue.length > 0) {
+                    e.target.value = formatId(rawValue);
+                }
+                // Activer le bouton si entre 4 et 14 caractères
+                const isValid = rawValue.length >= 4 && rawValue.length <= 14;
+                document.getElementById('registerBtn').disabled = !isValid;
+            });
+            
+            // Même logique pour le champ remote ID
             const remoteIdField = document.getElementById('remotePeerId');
-            if (remoteIdField && remoteStoredId) {
-                remoteIdField.value = formatId(remoteStoredId);
-            }
+            remoteIdField.addEventListener('input', (e) => {
+                let rawValue = unformatId(e.target.value).trim();
+                if (rawValue.length > 14) {
+                    rawValue = rawValue.substring(0, 14);
+                }
+                // Auto-formater l'ID pendant la saisie
+                if (rawValue.length > 0) {
+                    e.target.value = formatId(rawValue);
+                }
+            });
+            
+            // Pré-remplir l'ID du contact si existant (remoteIdField déjà déclaré plus haut)
+            if (remoteIdField && remoteStoredId) { remoteIdField.value = formatId(remoteStoredId); }
             
             // Changer le texte du bouton si les deux IDs sont pré-remplis
             const connectBtn = document.getElementById('connectBtn');
@@ -494,6 +545,16 @@
                 }
             }
             return id;
+        }
+
+        // Générer un ID aléatoire et l'afficher dans le champ
+        function generateId() {
+            const randomId = generateReadableId();
+            const idField = document.getElementById('myPeerId');
+            idField.value = formatId(randomId); // Formaté avec espaces : xxxx xxxx xx
+            idField.readOnly = false;
+            document.getElementById('registerBtn').disabled = false;
+            console.log('ID généré:', randomId);
         }
 
         // Génération d'une paire de clés ECDH (cryptage asymétrique)
@@ -652,11 +713,11 @@
             });
         }
 
-        // Initialiser PeerJS
-        async function initializePeer() {
-            const initBtn = document.getElementById('initBtn');
-            initBtn.disabled = true;
-            initBtn.textContent = '⏳ Initialisation...';
+        // Enregistrer le peer avec l'ID choisi
+        async function registerPeer() {
+            const registerBtn = document.getElementById('registerBtn');
+            registerBtn.disabled = true;
+            registerBtn.textContent = '⏳ Connexion en cours...';
 
             // Sauvegarder le nom (même s'il est vide)
             const nameInput = document.getElementById('myName');
@@ -668,16 +729,24 @@
                 peer.destroy();
             }
 
-            // Générer la paire de clés ECDH dès le début
+            // Récupérer l'ID du champ
+            const myIdInput = document.getElementById('myPeerId').value;
+            const myId = unformatId(myIdInput).trim().toLowerCase();
+            
+            if (myId.length < 4 || myId.length > 14) {
+                alert('L\'ID doit contenir entre 4 et 14 caractères');
+                registerBtn.disabled = false;
+                registerBtn.textContent = '🚀 Ouvrir connexion et enregistrer ID';
+                return;
+            }
+            
+            // Générer la paire de clés ECDH
             myKeyPair = await generateKeyPair();
             console.log('Paire de clés ECDH créée');
-
-            // Générer un ID lisible avec alternance consonne-voyelle
-            const randomId = generateReadableId();
-            console.log('ID généré (10 caractères):', randomId);
+            console.log('Enregistrement avec ID:', myId);
             
             // Utiliser le serveur officiel de PeerJS
-            peer = new Peer(randomId, {
+            peer = new Peer(myId, {
                 host: '0.peerjs.com',
                 secure: true,
                 port: 443,
@@ -696,9 +765,11 @@
                 localStorage.setItem('myPeerId', id);
                 
                 document.getElementById('myPeerId').value = formatId(id);
+                document.getElementById('myPeerId').readOnly = true;
                 document.getElementById('connectBtn').disabled = false;
                 updateStatus('En attente de connexion...', 'waiting');
-                initBtn.textContent = '✅ Initialisé';
+                registerBtn.textContent = '✅ Connecté au serveur';
+                registerBtn.disabled = true;
                 
                 // Afficher l'ID dans le header avec préfixe "ID:" et le nom si disponible
                 const headerIdElement = document.getElementById('headerId');
@@ -726,13 +797,9 @@
             peer.on('error', (err) => {
                 console.error('Erreur PeerJS:', err);
                 alert('Erreur: ' + err.message);
-                initBtn.disabled = false;
-                // Restaurer le texte du bouton selon le contexte
-                if (myStoredId) {
-                    initBtn.innerHTML = '🔄 Re-générer mon ID';
-                } else {
-                    initBtn.innerHTML = '🚀 générer mon ID';
-                }
+                registerBtn.disabled = false;
+                registerBtn.textContent = '🚀 Ouvrir connexion et enregistrer ID';
+                document.getElementById('myPeerId').readOnly = false;
             });
         }
 
@@ -741,8 +808,8 @@
             const remoteInput = document.getElementById('remotePeerId').value;
             const remotePeerId = unformatId(remoteInput).trim().toLowerCase();
             
-            if (!remotePeerId || remotePeerId.length !== 10) {
-                alert('Veuillez entrer un ID valide (10 caractères)');
+            if (!remotePeerId || remotePeerId.length < 4 || remotePeerId.length > 14) {
+                alert('Veuillez entrer un ID valide (4 à 14 caractères)');
                 return;
             }
             
@@ -818,7 +885,7 @@
                 if (data.type === 'name') {
                     // Recevoir le nom du correspondant
                     remoteName = data.data;
-                    updateStatus('Connecté avec ' + remoteName, true);
+                    updateStatus('Connecté avec ' + remoteName, 'connected');
                     console.log('Nom du correspondant:', remoteName);
                 } else if (data.type === 'public-key') {
                     // Recevoir la clé publique de l'autre peer
@@ -999,6 +1066,7 @@
             document.getElementById('messages').innerHTML = '';
             document.getElementById('encryptionBadge').style.display = 'none';
             document.getElementById('disconnectBadge').style.display = 'none';
+            document.getElementById('myPeerId').readOnly = false;
             encryptionKey = null;
             myKeyPair = null;
             otherPublicKey = null;
