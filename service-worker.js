@@ -1,5 +1,5 @@
 // Service Worker pour PWA
-const CACHE_NAME = 'peerjs-chat-v43';
+const CACHE_NAME = 'peerjs-chat-v44';
 const urlsToCache = [
   '/messagerie/P2P.html',
   '/messagerie/',
@@ -22,52 +22,38 @@ self.addEventListener('install', (event) => {
 
 // Activation du Service Worker
 self.addEventListener('activate', (event) => {
-  // Prendre le contrôle immédiatement
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames.map((cacheName) => {
-          if (cacheName !== CACHE_NAME) {
+    caches.keys()
+      .then(cacheNames => Promise.all(
+        cacheNames
+          .filter(cacheName => cacheName !== CACHE_NAME)
+          .map(cacheName => {
             console.log('Suppression ancien cache:', cacheName);
             return caches.delete(cacheName);
-          }
-        })
-      );
-    }).then(() => {
-      return self.clients.claim();
-    })
+          })
+      ))
+      .then(() => self.clients.claim())
   );
 });
 
 // Interception des requêtes - Stratégie Network First pour P2P.html
 self.addEventListener('fetch', (event) => {
-  // Pour P2P.html, toujours essayer le réseau d'abord
-  if (event.request.url.includes('P2P.html')) {
-    event.respondWith(
-      fetch(event.request)
-        .then((response) => {
-          // Mettre à jour le cache avec la nouvelle version
-          const responseClone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, responseClone);
-          });
-          return response;
-        })
-        .catch(() => {
-          // En cas d'échec réseau, utiliser le cache
-          return caches.match(event.request);
-        })
-    );
-  } else {
-    // Pour les autres ressources, utiliser le cache d'abord
-    event.respondWith(
-      caches.match(event.request)
-        .then((response) => {
-          if (response) {
+  const isMainPage = event.request.url.includes('P2P.html');
+  
+  event.respondWith(
+    isMainPage
+      ? // Network First pour P2P.html
+        fetch(event.request)
+          .then(response => {
+            // Mettre à jour le cache
+            caches.open(CACHE_NAME).then(cache => 
+              cache.put(event.request, response.clone())
+            );
             return response;
-          }
-          return fetch(event.request);
-        })
-    );
-  }
+          })
+          .catch(() => caches.match(event.request))
+      : // Cache First pour les autres ressources
+        caches.match(event.request)
+          .then(response => response || fetch(event.request))
+  );
 });

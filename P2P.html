@@ -343,7 +343,7 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>🔐 Messagerie Point à Point Cryptée <span style="font-size: 0.4em;">v0.43</span></h1>
+            <h1>🔐 Messagerie Point à Point Cryptée <span style="font-size: 0.4em;">v0.44</span></h1>
             <div class="header-info">
                 <span class="header-id" id="headerId"></span>
             </div>
@@ -427,21 +427,12 @@
         const voyelles = 'aeiouy';
 
         // Formater l'ID avec espaces tous les 4 caractères
-        // Exemples: abcd -> abcd, abcdefgh -> abcd efgh, bokaletufr -> boka letu fr
         function formatId(id) {
-            if (id.length <= 4) return id;
-            let formatted = '';
-            for (let i = 0; i < id.length; i++) {
-                if (i > 0 && i % 4 === 0) formatted += ' ';
-                formatted += id[i];
-            }
-            return formatted;
+            return id.match(/.{1,4}/g)?.join(' ') || id;
         }
 
         // Retirer les espaces d'un ID
-        function unformatId(id) {
-            return id.replace(/\s/g, '');
-        }
+        const unformatId = (id) => id.replace(/\s/g, '');
 
         // Démarrer le timer d'inactivité (10 minutes)
         function startInactivityTimer() {
@@ -492,36 +483,23 @@
             // Activer le bouton registerBtn quand l'ID change (4-14 caractères acceptés)
             myIdField.addEventListener('input', (e) => {
                 let rawValue = unformatId(e.target.value).trim();
-                // Limiter à 14 caractères sans espaces
-                if (rawValue.length > 14) {
-                    rawValue = rawValue.substring(0, 14);
-                }
+                // Limiter à 14 caractères
+                if (rawValue.length > 14) rawValue = rawValue.substring(0, 14);
                 // Auto-formater l'ID pendant la saisie
-                if (rawValue.length > 0) {
-                    e.target.value = formatId(rawValue);
-                }
+                if (rawValue.length > 0) e.target.value = formatId(rawValue);
                 // Colorer en rouge si moins de 4 caractères
-                if (rawValue.length > 0 && rawValue.length < 4) {
-                    e.target.classList.add('invalid-input');
-                } else {
-                    e.target.classList.remove('invalid-input');
-                }
+                e.target.classList.toggle('invalid-input', rawValue.length > 0 && rawValue.length < 4);
                 // Activer le bouton si entre 4 et 14 caractères
-                const isValid = rawValue.length >= 4 && rawValue.length <= 14;
-                document.getElementById('registerBtn').disabled = !isValid;
+                document.getElementById('registerBtn').disabled = rawValue.length < 4 || rawValue.length > 14;
             });
             
             // Même logique pour le champ remote ID
             const remoteIdField = document.getElementById('remotePeerId');
             remoteIdField.addEventListener('input', (e) => {
                 let rawValue = unformatId(e.target.value).trim();
-                if (rawValue.length > 14) {
-                    rawValue = rawValue.substring(0, 14);
-                }
+                if (rawValue.length > 14) rawValue = rawValue.substring(0, 14);
                 // Auto-formater l'ID pendant la saisie
-                if (rawValue.length > 0) {
-                    e.target.value = formatId(rawValue);
-                }
+                if (rawValue.length > 0) e.target.value = formatId(rawValue);
             });
             
             // Pré-remplir l'ID du contact si existant (remoteIdField déjà déclaré plus haut)
@@ -658,6 +636,30 @@
             );
         }
 
+        // Configuration par défaut du peer
+        const getPeerConfig = () => ({
+            host: '0.peerjs.com',
+            secure: true,
+            port: 443,
+            path: '/',
+            config: {
+                iceServers: [
+                    { urls: 'stun:stun.l.google.com:19302' },
+                    { urls: 'stun:global.stun.twilio.com:3478' }
+                ]
+            }
+        });
+
+        // Mettre à jour l'affichage de l'ID dans le header
+        function updateHeaderId(id) {
+            const headerIdElement = document.getElementById('headerId');
+            const headerText = myName 
+                ? `${myName}, <strong>ID:</strong> ${formatId(id)}`
+                : `<strong>ID:</strong> ${formatId(id)}`;
+            headerIdElement.innerHTML = headerText;
+            headerIdElement.style.display = 'block';
+        }
+
         // Réinitialiser le peer avec l'ID stocké (lors du rechargement de page)
         async function reinitializePeerWithStoredId() {
             console.log('Réinitialisation automatique du peer avec ID conservé:', myStoredId);
@@ -669,33 +671,14 @@
             // Retourner une promesse qui se résout quand le peer est ouvert
             return new Promise((resolve, reject) => {
                 // Utiliser l'ID conservé
-                peer = new Peer(myStoredId, {
-                    host: '0.peerjs.com',
-                    secure: true,
-                    port: 443,
-                    path: '/',
-                    config: {
-                        iceServers: [
-                            { urls: 'stun:stun.l.google.com:19302' },
-                            { urls: 'stun:global.stun.twilio.com:3478' }
-                        ]
-                    }
-                });
+                peer = new Peer(myStoredId, getPeerConfig());
 
                 peer.on('open', (id) => {
                     document.getElementById('connectBtn').disabled = false;
                     updateStatus('En attente de connexion...', 'waiting');
                     
                     // Afficher l'ID dans le header
-                    const headerIdElement = document.getElementById('headerId');
-                    let headerText = '';
-                    if (myName) {
-                        headerText = myName + ', <strong>ID:</strong> ' + formatId(id);
-                    } else {
-                        headerText = '<strong>ID:</strong> ' + formatId(id);
-                    }
-                    headerIdElement.innerHTML = headerText;
-                    headerIdElement.style.display = 'block';
+                    updateHeaderId(id);
                     
                     // Démarrer le timer d'inactivité
                     startInactivityTimer();
@@ -735,9 +718,8 @@
                 peer.destroy();
             }
 
-            // Récupérer l'ID du champ
-            const myIdInput = document.getElementById('myPeerId').value;
-            const myId = unformatId(myIdInput).trim().toLowerCase();
+            // Récupérer et valider l'ID
+            const myId = unformatId(document.getElementById('myPeerId').value).trim().toLowerCase();
             
             if (myId.length < 4 || myId.length > 14) {
                 alert('L\'ID doit contenir entre 4 et 14 caractères');
@@ -752,18 +734,7 @@
             console.log('Enregistrement avec ID:', myId);
             
             // Utiliser le serveur officiel de PeerJS
-            peer = new Peer(myId, {
-                host: '0.peerjs.com',
-                secure: true,
-                port: 443,
-                path: '/',
-                config: {
-                    iceServers: [
-                        { urls: 'stun:stun.l.google.com:19302' },
-                        { urls: 'stun:global.stun.twilio.com:3478' }
-                    ]
-                }
-            });
+            peer = new Peer(myId, getPeerConfig());
 
             peer.on('open', (id) => {
                 // Sauvegarder l'ID dans localStorage
@@ -777,16 +748,8 @@
                 registerBtn.textContent = '✅ Connecté au serveur';
                 registerBtn.disabled = true;
                 
-                // Afficher l'ID dans le header avec préfixe "ID:" et le nom si disponible
-                const headerIdElement = document.getElementById('headerId');
-                let headerText = '';
-                if (myName) {
-                    headerText = myName + ', <strong>ID:</strong> ' + formatId(id);
-                } else {
-                    headerText = '<strong>ID:</strong> ' + formatId(id);
-                }
-                headerIdElement.innerHTML = headerText;
-                headerIdElement.style.display = 'block';
+                // Afficher l'ID dans le header
+                updateHeaderId(id);
                 
                 // Démarrer le timer d'inactivité
                 startInactivityTimer();
@@ -809,6 +772,15 @@
             });
         }
 
+        // Réinitialiser le bouton de connexion
+        function resetConnectButton() {
+            const connectBtn = document.getElementById('connectBtn');
+            connectBtn.textContent = '📞 Se connecter';
+            connectBtn.onclick = connectToPeer;
+            connectBtn.disabled = false;
+            connectBtn.removeAttribute('disabled');
+        }
+
         // Annuler la tentative de connexion en cours
         function cancelConnection() {
             console.log('Annulation de la connexion en cours...');
@@ -819,21 +791,13 @@
                 connectionTimeout = null;
             }
             
-            // Fermer la connexion si elle existe
-            if (conn) {
-                conn.close();
-                conn = null;
-            }
+            // Fermer la connexion
+            if (conn) conn.close();
+            conn = null;
             
-            // Réinitialiser le flag
+            // Réinitialiser le flag et restaurer l'interface
             isConnecting = false;
-            
-            // Restaurer l'interface
-            const connectBtn = document.getElementById('connectBtn');
-            connectBtn.textContent = '📞 Se connecter';
-            connectBtn.onclick = connectToPeer;
-            connectBtn.disabled = false;
-            connectBtn.removeAttribute('disabled'); // Forcer activation
+            resetConnectButton();
             
             // Remettre le statut
             updateStatus('En attente de connexion...', 'waiting');
@@ -851,10 +815,9 @@
                 return;
             }
             
-            const remoteInput = document.getElementById('remotePeerId').value;
-            const remotePeerId = unformatId(remoteInput).trim().toLowerCase();
+            const remotePeerId = unformatId(document.getElementById('remotePeerId').value).trim().toLowerCase();
             
-            if (!remotePeerId || remotePeerId.length < 4 || remotePeerId.length > 14) {
+            if (remotePeerId.length < 4 || remotePeerId.length > 14) {
                 alert('Veuillez entrer un ID valide (4 à 14 caractères)');
                 return;
             }
@@ -889,22 +852,16 @@
                     } catch (err) {
                         alert('Erreur lors de l\'initialisation: ' + err.message);
                         // Restaurer le bouton en cas d'erreur
-                        connectBtn.textContent = '📞 Se connecter';
-                        connectBtn.onclick = connectToPeer;
-                        connectBtn.disabled = false;
-                        connectBtn.removeAttribute('disabled');
                         isConnecting = false;
+                        resetConnectButton();
                         document.getElementById('remotePeerId').disabled = false;
                         return;
                     }
                 } else {
                     alert('Veuillez d\'abord générer votre ID');
                     // Restaurer le bouton en cas d'erreur
-                    connectBtn.textContent = '📞 Se connecter';
-                    connectBtn.onclick = connectToPeer;
-                    connectBtn.disabled = false;
-                    connectBtn.removeAttribute('disabled');
                     isConnecting = false;
+                    resetConnectButton();
                     document.getElementById('remotePeerId').disabled = false;
                     return;
                 }
@@ -925,10 +882,7 @@
                     isConnecting = false;
                     
                     // Restaurer l'interface
-                    connectBtn.textContent = '📞 Se connecter';
-                    connectBtn.onclick = connectToPeer;
-                    connectBtn.disabled = false; // Réactiver le bouton
-                    connectBtn.removeAttribute('disabled'); // Forcer activation
+                    resetConnectButton();
                     
                     // Réactiver le champ
                     document.getElementById('remotePeerId').disabled = false;
@@ -953,13 +907,9 @@
                     connectionTimeout = null;
                 }
                 
-                // Réinitialiser le flag de connexion
+                // Réinitialiser le flag de connexion et restaurer le bouton
                 isConnecting = false;
-                
-                // Restaurer le bouton (au cas où)
-                const connectBtn = document.getElementById('connectBtn');
-                connectBtn.textContent = '📞 Se connecter';
-                connectBtn.onclick = connectToPeer;
+                resetConnectButton();
                 
                 // Réactiver le champ
                 document.getElementById('remotePeerId').disabled = false;
@@ -1106,8 +1056,9 @@
             messageDiv.className = `message ${type}`;
             
             const now = new Date();
-            const time = now.getHours().toString().padStart(2, '0') + ':' + 
-                        now.getMinutes().toString().padStart(2, '0');
+            const time = [now.getHours(), now.getMinutes()]
+                .map(n => n.toString().padStart(2, '0'))
+                .join(':');
             
             messageDiv.innerHTML = `
                 <div class="message-content">
@@ -1124,21 +1075,23 @@
         function addSystemMessage(text) {
             const messagesDiv = document.getElementById('messages');
             const messageDiv = document.createElement('div');
-            messageDiv.style.textAlign = 'center';
-            messageDiv.style.color = '#6c757d';
-            messageDiv.style.fontSize = '14px';
-            messageDiv.style.margin = '10px 0';
+            Object.assign(messageDiv.style, {
+                textAlign: 'center',
+                color: '#6c757d',
+                fontSize: '14px',
+                margin: '10px 0'
+            });
             messageDiv.textContent = text;
             messagesDiv.appendChild(messageDiv);
             messagesDiv.scrollTop = messagesDiv.scrollHeight;
         }
 
         // Échapper le HTML
-        function escapeHtml(text) {
+        const escapeHtml = (text) => {
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
-        }
+        };
 
         // Mettre à jour le statut
         // state: 'disconnected' (rouge), 'waiting' (jaune animé), 'connected' (vert fixe)
@@ -1163,14 +1116,10 @@
             // Annuler le timer d'inactivité
             clearInactivityTimer();
             
-            if (conn) {
-                conn.close();
-                conn = null;
-            }
-            if (peer) {
-                peer.destroy();
-                peer = null;
-            }
+            if (conn) conn.close();
+            if (peer) peer.destroy();
+            conn = null;
+            peer = null;
             resetChat();
         }
 
@@ -1241,7 +1190,7 @@
                     }
                 }).then(() => {
                     // Enregistrer le nouveau service worker avec paramètre de version
-                    navigator.serviceWorker.register('./service-worker.js?v=43')
+                    navigator.serviceWorker.register('./service-worker.js?v=44')
                         .then((registration) => {
                             console.log('Service Worker v39 enregistré avec succès:', registration.scope);
                             // Forcer la mise à jour immédiate
