@@ -338,12 +338,94 @@
         .invalid-input {
             color: #dc3545 !important;
         }
+
+        .voice-controls {
+            padding: 15px;
+            background: #f8f9fa;
+            border-top: 1px solid #dee2e6;
+            display: none;
+            gap: 10px;
+        }
+
+        .voice-controls.active {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .btn-voice {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-voice.start {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-voice.start:hover {
+            background: #218838;
+            transform: translateY(-2px);
+        }
+
+        .btn-voice.end {
+            background: #dc3545;
+            color: white;
+        }
+
+        .btn-voice.end:hover {
+            background: #c82333;
+        }
+
+        .btn-voice.mute {
+            background: #ffc107;
+            color: #333;
+        }
+
+        .btn-voice.mute:hover {
+            background: #e0a800;
+        }
+
+        .btn-voice.mute.active {
+            background: #6c757d;
+            color: white;
+        }
+
+        .voice-status {
+            display: none;
+            padding: 10px;
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            border-radius: 8px;
+            color: #155724;
+            font-weight: 600;
+            text-align: center;
+            margin: 10px 15px;
+            animation: pulse-green 2s infinite;
+        }
+
+        .voice-status.active {
+            display: block;
+        }
+
+        @keyframes pulse-green {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>🔐 Messagerie Point à Point Cryptée <span style="font-size: 0.4em;">v0.44</span></h1>
+            <h1>🔐 Messagerie Point à Point Cryptée <span style="font-size: 0.4em;">v0.45</span></h1>
             <div class="header-info">
                 <span class="header-id" id="headerId"></span>
             </div>
@@ -382,7 +464,7 @@
             </div>
 
             <button class="btn btn-primary" id="registerBtn" onclick="registerPeer()" disabled>
-                🚀 S'enregistrer sur le serveur
+                 S'enregistrer sur le serveur
             </button>
 
             <div class="input-group">
@@ -390,7 +472,7 @@
             </div>
 
             <button class="btn btn-primary" id="connectBtn" onclick="connectToPeer()" disabled>
-                📞 Se connecter
+                [chat] Se connecter
             </button>
 
             <button class="btn btn-secondary" id="disconnectBtn" onclick="disconnect()" style="display: none;">
@@ -400,12 +482,20 @@
 
         <!-- Zone de chat -->
         <div class="chat-container" id="chatContainer">
+            <div class="voice-status" id="voiceStatus">🎤 Appel vocal en cours...</div>
             <div class="messages" id="messages"></div>
+            <div class="voice-controls" id="voiceControls">
+                <button class="btn-voice start" id="startVoiceBtn" onclick="startVoiceCall()">🎤 Démarrer appel vocal</button>
+                <button class="btn-voice mute" id="muteBtn" onclick="toggleMute()" style="display: none;">🔇 Couper micro</button>
+                <button class="btn-voice end" id="endVoiceBtn" onclick="endVoiceCall()" style="display: none;">📞 Raccrocher</button>
+            </div>
             <div class="input-container">
                 <input type="text" id="messageInput" placeholder="Tapez votre message..." onkeypress="handleKeyPress(event)">
                 <button onclick="sendMessage()">▶</button>
             </div>
         </div>
+        <!-- Élément audio pour le flux distant -->
+        <audio id="remoteAudio" autoplay></audio>
     </div>
 
     <script>
@@ -421,6 +511,9 @@
         let inactivityTimer = null; // Timer pour déconnexion après 10 min d'inactivité
         let connectionTimeout = null; // Timer pour timeout de connexion (30 secondes)
         let isConnecting = false; // Flag pour indiquer une connexion en cours
+        let mediaCall = null; // Appel vocal WebRTC
+        let localStream = null; // Flux audio local (microphone)
+        let isMuted = false; // État du micro
 
         // Consonnes et voyelles
         const consonnes = 'bcdfghjklmnpqrstvwxz';
@@ -693,6 +786,12 @@
                     updateStatus('Connexion entrante...', false);
                 });
 
+                // Gérer les appels vocaux entrants
+                peer.on('call', (call) => {
+                    console.log('Appel vocal entrant...');
+                    answerVoiceCall(call);
+                });
+
                 peer.on('error', (err) => {
                     console.error('Erreur PeerJS lors de la réinitialisation:', err);
                     // En cas d'erreur, l'utilisateur devra re-générer un ID
@@ -763,6 +862,12 @@
                 updateStatus('Connexion entrante...', false);
             });
 
+            // Gérer les appels vocaux entrants
+            peer.on('call', (call) => {
+                console.log('Appel vocal entrant...');
+                answerVoiceCall(call);
+            });
+
             peer.on('error', (err) => {
                 console.error('Erreur PeerJS:', err);
                 alert('Erreur: ' + err.message);
@@ -775,7 +880,7 @@
         // Réinitialiser le bouton de connexion
         function resetConnectButton() {
             const connectBtn = document.getElementById('connectBtn');
-            connectBtn.textContent = '📞 Se connecter';
+            connectBtn.textContent = '[chat] Se connecter';
             connectBtn.onclick = connectToPeer;
             connectBtn.disabled = false;
             connectBtn.removeAttribute('disabled');
@@ -920,6 +1025,7 @@
                 document.getElementById('disconnectBtn').style.display = 'block';
                 document.getElementById('encryptionBadge').style.display = 'inline-block';
                 document.getElementById('disconnectBadge').style.display = 'inline-block';
+                document.getElementById('voiceControls').classList.add('active');
 
                 // Vérifier que la paire de clés ECDH existe
                 if (!myKeyPair) {
@@ -1111,10 +1217,175 @@
             // Si 'disconnected' ou false, pas de classe = rouge par défaut
         }
 
+        // Démarrer un appel vocal
+        async function startVoiceCall() {
+            if (!peer || !conn) {
+                alert('⚠️ Veuillez d\'abord établir une connexion chat');
+                return;
+            }
+
+            try {
+                console.log('Demande d\'accès au microphone...');
+                localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                console.log('Microphone activé, démarrage de l\'appel...');
+                
+                // Appeler le peer distant
+                mediaCall = peer.call(remoteStoredId, localStream);
+                
+                if (!mediaCall) {
+                    throw new Error('Impossible de créer l\'appel');
+                }
+
+                // Recevoir le flux audio distant
+                mediaCall.on('stream', (remoteStream) => {
+                    console.log('Flux audio distant reçu');
+                    const remoteAudio = document.getElementById('remoteAudio');
+                    remoteAudio.srcObject = remoteStream;
+                    remoteAudio.play().catch(e => console.error('Erreur lecture audio:', e));
+                });
+
+                mediaCall.on('close', () => {
+                    console.log('Appel terminé par l\'autre peer');
+                    endVoiceCall();
+                    addSystemMessage('📞 Appel vocal terminé');
+                });
+
+                mediaCall.on('error', (err) => {
+                    console.error('Erreur d\'appel:', err);
+                    addSystemMessage('⚠️ Erreur lors de l\'appel vocal');
+                    endVoiceCall();
+                });
+
+                // Mettre à jour l'interface
+                document.getElementById('startVoiceBtn').style.display = 'none';
+                document.getElementById('muteBtn').style.display = 'block';
+                document.getElementById('endVoiceBtn').style.display = 'block';
+                document.getElementById('voiceStatus').classList.add('active');
+                
+                addSystemMessage('🎤 Appel vocal démarré');
+                console.log('Appel vocal actif');
+            } catch (err) {
+                console.error('Erreur accès microphone:', err);
+                alert('❌ Impossible d\'accéder au microphone.\n\nVérifiez que :\n• Vous avez autorisé l\'accès au micro\n• Votre micro fonctionne\n• Aucune autre application n\'utilise le micro');
+            }
+        }
+
+        // Répondre à un appel vocal entrant
+        async function answerVoiceCall(call) {
+            try {
+                console.log('Réponse à l\'appel entrant...');
+                
+                // Demander accès au microphone
+                localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                
+                // Répondre à l'appel avec notre flux audio
+                call.answer(localStream);
+                mediaCall = call;
+                
+                // Recevoir le flux audio distant
+                call.on('stream', (remoteStream) => {
+                    console.log('Flux audio distant reçu (appel entrant)');
+                    const remoteAudio = document.getElementById('remoteAudio');
+                    remoteAudio.srcObject = remoteStream;
+                    remoteAudio.play().catch(e => console.error('Erreur lecture audio:', e));
+                });
+
+                call.on('close', () => {
+                    console.log('Appel terminé par l\'autre peer');
+                    endVoiceCall();
+                    addSystemMessage('📞 Appel vocal terminé');
+                });
+
+                call.on('error', (err) => {
+                    console.error('Erreur d\'appel:', err);
+                    endVoiceCall();
+                });
+
+                // Mettre à jour l'interface
+                document.getElementById('startVoiceBtn').style.display = 'none';
+                document.getElementById('muteBtn').style.display = 'block';
+                document.getElementById('endVoiceBtn').style.display = 'block';
+                document.getElementById('voiceStatus').classList.add('active');
+                
+                addSystemMessage('🎤 Appel vocal accepté');
+                console.log('Appel vocal actif (entrant)');
+            } catch (err) {
+                console.error('Erreur réponse appel:', err);
+                alert('❌ Impossible de répondre à l\'appel.\nVérifiez l\'accès à votre microphone.');
+            }
+        }
+
+        // Terminer l'appel vocal
+        function endVoiceCall() {
+            console.log('Fin de l\'appel vocal...');
+            
+            // Fermer l'appel MediaConnection
+            if (mediaCall) {
+                mediaCall.close();
+                mediaCall = null;
+            }
+            
+            // Arrêter le flux local (microphone)
+            if (localStream) {
+                localStream.getTracks().forEach(track => track.stop());
+                localStream = null;
+            }
+            
+            // Arrêter le flux distant
+            const remoteAudio = document.getElementById('remoteAudio');
+            if (remoteAudio.srcObject) {
+                remoteAudio.srcObject.getTracks().forEach(track => track.stop());
+                remoteAudio.srcObject = null;
+            }
+            
+            // Réinitialiser l'interface
+            document.getElementById('startVoiceBtn').style.display = 'block';
+            document.getElementById('muteBtn').style.display = 'none';
+            document.getElementById('endVoiceBtn').style.display = 'none';
+            document.getElementById('voiceStatus').classList.remove('active');
+            
+            // Réinitialiser l'état du micro
+            isMuted = false;
+            const muteBtn = document.getElementById('muteBtn');
+            muteBtn.textContent = '🔇 Couper micro';
+            muteBtn.classList.remove('active');
+            
+            console.log('Appel vocal terminé');
+        }
+
+        // Couper/réactiver le microphone
+        function toggleMute() {
+            if (!localStream) return;
+            
+            const audioTrack = localStream.getAudioTracks()[0];
+            if (!audioTrack) return;
+            
+            isMuted = !isMuted;
+            audioTrack.enabled = !isMuted;
+            
+            const muteBtn = document.getElementById('muteBtn');
+            if (isMuted) {
+                muteBtn.textContent = '🔊 Activer micro';
+                muteBtn.classList.add('active');
+                addSystemMessage('🔇 Micro coupé');
+            } else {
+                muteBtn.textContent = '🔇 Couper micro';
+                muteBtn.classList.remove('active');
+                addSystemMessage('🔊 Micro activé');
+            }
+            
+            console.log('Micro:', isMuted ? 'coupé' : 'activé');
+        }
+
         // Déconnecter
         function disconnect() {
             // Annuler le timer d'inactivité
             clearInactivityTimer();
+            
+            // Terminer l'appel vocal si actif
+            if (mediaCall || localStream) {
+                endVoiceCall();
+            }
             
             if (conn) conn.close();
             if (peer) peer.destroy();
@@ -1138,6 +1409,10 @@
             myKeyPair = null;
             otherPublicKey = null;
             remoteName = '';
+            
+            // Masquer les contrôles vocaux
+            document.getElementById('voiceControls').classList.remove('active');
+            document.getElementById('voiceStatus').classList.remove('active');
             
             // Remettre les champs en lecture/écriture et pré-remplis
             const myIdField = document.getElementById('myPeerId');
@@ -1190,7 +1465,7 @@
                     }
                 }).then(() => {
                     // Enregistrer le nouveau service worker avec paramètre de version
-                    navigator.serviceWorker.register('./service-worker.js?v=44')
+                    navigator.serviceWorker.register('./service-worker.js?v=45')
                         .then((registration) => {
                             console.log('Service Worker v39 enregistré avec succès:', registration.scope);
                             // Forcer la mise à jour immédiate
@@ -1205,3 +1480,4 @@
     </script>
 </body>
 </html>
+
