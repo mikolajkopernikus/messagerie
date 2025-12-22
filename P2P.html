@@ -339,7 +339,7 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>🔐 Messagerie Point à Point Cryptée <span style="font-size: 0.4em;">v0.35</span></h1>
+            <h1>🔐 Messagerie Point à Point Cryptée <span style="font-size: 0.4em;">v0.36</span></h1>
             <div class="header-info">
                 <span class="header-id" id="headerId"></span>
             </div>
@@ -357,7 +357,7 @@
         <!-- Panel de connexion -->
         <div class="connection-panel" id="connectionPanel">
             <div class="info-box">
-                <strong>Étape 1 :</strong> Générez un ID aléatoire (10 car.) ou créez le vôtre (4-14 car.).<br>
+                <strong>Étape 1 :</strong> Générez un ID aléatoire ou créez le (4-14 car.).<br>
                 <strong>Étape 2 :</strong> Ouvrez la connexion pour enregistrer votre ID sur le serveur.<br>
                 <strong>Étape 3 :</strong> Entrez l'ID de votre contact pour se connecter.
             </div>
@@ -369,7 +369,7 @@
 
             <div class="input-group">
                
-                <div class="id-input-wrapper"> <label>Votre ID <span style="font-size: 0.85em;">(4-14 caractères)</span></label>
+                <div class="id-input-wrapper"> <label>Votre ID <span style="font-size: 0.85em;"></span></label>
                     <input type="text" id="myPeerId" placeholder="4 à 14 caractères" maxlength="18" oninput="this.value = this.value.toLowerCase()" style="width: 20ch;">
                     <button class="btn btn-primary btn-inline" onclick="generateId()">
                         🎲 Générer
@@ -514,12 +514,6 @@
             
             // Pré-remplir l'ID du contact si existant (remoteIdField déjà déclaré plus haut)
             if (remoteIdField && remoteStoredId) { remoteIdField.value = formatId(remoteStoredId); }
-            
-            // Changer le texte du bouton si les deux IDs sont pré-remplis
-            const connectBtn = document.getElementById('connectBtn');
-            if (myStoredId && remoteStoredId) {
-                connectBtn.textContent = '🔄 Se Re-connecter';
-            }
             
             // Auto-initialisation du peer si un ID existe déjà
             if (myStoredId) {
@@ -1105,16 +1099,9 @@
             // Désactiver le bouton de connexion jusqu'à réenregistrement du peer
             document.getElementById('connectBtn').disabled = true;
             
-            // Remettre le texte des boutons
+            // Remettre le texte du bouton register
             const registerBtn = document.getElementById('registerBtn');
             registerBtn.textContent = '🚀 Ouvrir connexion et enregistrer ID';
-            
-            const connectBtn = document.getElementById('connectBtn');
-            if (myStoredId && remoteStoredId) {
-                connectBtn.textContent = '🔄 Se Re-connecter';
-            } else {
-                connectBtn.textContent = '📞 Se connecter';
-            }
         }
 
         // Enregistrer le Service Worker pour PWA
