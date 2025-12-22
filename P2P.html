@@ -343,7 +343,7 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>🔐 Messagerie Point à Point Cryptée <span style="font-size: 0.4em;">v0.42</span></h1>
+            <h1>🔐 Messagerie Point à Point Cryptée <span style="font-size: 0.4em;">v0.43</span></h1>
             <div class="header-info">
                 <span class="header-id" id="headerId"></span>
             </div>
@@ -833,6 +833,7 @@
             connectBtn.textContent = '📞 Se connecter';
             connectBtn.onclick = connectToPeer;
             connectBtn.disabled = false;
+            connectBtn.removeAttribute('disabled'); // Forcer activation
             
             // Remettre le statut
             updateStatus('En attente de connexion...', 'waiting');
@@ -868,8 +869,9 @@
             connectBtn.textContent = '❌ Annuler la connexion';
             connectBtn.onclick = cancelConnection;
             connectBtn.disabled = false; // Activer le bouton
+            connectBtn.removeAttribute('disabled'); // FORCER le retrait de l'attribut disabled
             console.log('🔧 APRÈS: connectBtn.disabled =', connectBtn.disabled);
-            console.log('🔧 Bouton doit être ACTIF maintenant - version v0.42');
+            console.log('🔧 Bouton doit être ACTIF maintenant - version v0.43');
             isConnecting = true;
             
             // Désactiver le champ ID du contact pendant la connexion
@@ -890,6 +892,7 @@
                         connectBtn.textContent = '📞 Se connecter';
                         connectBtn.onclick = connectToPeer;
                         connectBtn.disabled = false;
+                        connectBtn.removeAttribute('disabled');
                         isConnecting = false;
                         document.getElementById('remotePeerId').disabled = false;
                         return;
@@ -900,6 +903,7 @@
                     connectBtn.textContent = '📞 Se connecter';
                     connectBtn.onclick = connectToPeer;
                     connectBtn.disabled = false;
+                    connectBtn.removeAttribute('disabled');
                     isConnecting = false;
                     document.getElementById('remotePeerId').disabled = false;
                     return;
@@ -924,6 +928,7 @@
                     connectBtn.textContent = '📞 Se connecter';
                     connectBtn.onclick = connectToPeer;
                     connectBtn.disabled = false; // Réactiver le bouton
+                    connectBtn.removeAttribute('disabled'); // Forcer activation
                     
                     // Réactiver le champ
                     document.getElementById('remotePeerId').disabled = false;
@@ -1236,7 +1241,7 @@
                     }
                 }).then(() => {
                     // Enregistrer le nouveau service worker avec paramètre de version
-                    navigator.serviceWorker.register('./service-worker.js?v=42')
+                    navigator.serviceWorker.register('./service-worker.js?v=43')
                         .then((registration) => {
                             console.log('Service Worker v39 enregistré avec succès:', registration.scope);
                             // Forcer la mise à jour immédiate

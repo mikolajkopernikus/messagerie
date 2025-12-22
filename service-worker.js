@@ -1,5 +1,5 @@
 // Service Worker pour PWA
-const CACHE_NAME = 'peerjs-chat-v42';
+const CACHE_NAME = 'peerjs-chat-v43';
 const urlsToCache = [
   '/messagerie/P2P.html',
   '/messagerie/',
