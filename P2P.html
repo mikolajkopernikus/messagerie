@@ -343,7 +343,7 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>🔐 Messagerie Point à Point Cryptée <span style="font-size: 0.4em;">v0.41</span></h1>
+            <h1>🔐 Messagerie Point à Point Cryptée <span style="font-size: 0.4em;">v0.42</span></h1>
             <div class="header-info">
                 <span class="header-id" id="headerId"></span>
             </div>
@@ -382,7 +382,7 @@
             </div>
 
             <button class="btn btn-primary" id="registerBtn" onclick="registerPeer()" disabled>
-                🚀 Ouvrir connexion et enregistrer ID
+                🚀 S'enregistrer sur le serveur
             </button>
 
             <div class="input-group">
@@ -742,7 +742,7 @@
             if (myId.length < 4 || myId.length > 14) {
                 alert('L\'ID doit contenir entre 4 et 14 caractères');
                 registerBtn.disabled = false;
-                registerBtn.textContent = '🚀 Ouvrir connexion et enregistrer ID';
+                registerBtn.textContent = '🚀 S\'enregistrer sur le serveur';
                 return;
             }
             
@@ -804,7 +804,7 @@
                 console.error('Erreur PeerJS:', err);
                 alert('Erreur: ' + err.message);
                 registerBtn.disabled = false;
-                registerBtn.textContent = '🚀 Ouvrir connexion et enregistrer ID';
+                registerBtn.textContent = '🚀 S\'enregistrer sur le serveur';
                 document.getElementById('myPeerId').readOnly = false;
             });
         }
@@ -864,9 +864,12 @@
 
             // MODIFIER LE BOUTON IMMÉDIATEMENT pour permettre l'annulation
             const connectBtn = document.getElementById('connectBtn');
+            console.log('🔧 AVANT: connectBtn.disabled =', connectBtn.disabled);
             connectBtn.textContent = '❌ Annuler la connexion';
             connectBtn.onclick = cancelConnection;
             connectBtn.disabled = false; // Activer le bouton
+            console.log('🔧 APRÈS: connectBtn.disabled =', connectBtn.disabled);
+            console.log('🔧 Bouton doit être ACTIF maintenant - version v0.42');
             isConnecting = true;
             
             // Désactiver le champ ID du contact pendant la connexion
@@ -1214,7 +1217,7 @@
             
             // Remettre le texte du bouton register
             const registerBtn = document.getElementById('registerBtn');
-            registerBtn.textContent = '🚀 Ouvrir connexion et enregistrer ID';
+            registerBtn.textContent = '🚀 S\'enregistrer sur le serveur';
         }
 
         // Enregistrer le Service Worker pour PWA
@@ -1233,7 +1236,7 @@
                     }
                 }).then(() => {
                     // Enregistrer le nouveau service worker avec paramètre de version
-                    navigator.serviceWorker.register('./service-worker.js?v=41')
+                    navigator.serviceWorker.register('./service-worker.js?v=42')
                         .then((registration) => {
                             console.log('Service Worker v39 enregistré avec succès:', registration.scope);
                             // Forcer la mise à jour immédiate
