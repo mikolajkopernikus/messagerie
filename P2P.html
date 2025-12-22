@@ -343,7 +343,7 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>🔐 Messagerie Point à Point Cryptée <span style="font-size: 0.4em;">v0.40</span></h1>
+            <h1>🔐 Messagerie Point à Point Cryptée <span style="font-size: 0.4em;">v0.41</span></h1>
             <div class="header-info">
                 <span class="header-id" id="headerId"></span>
             </div>
@@ -862,6 +862,18 @@
             remoteStoredId = remotePeerId;
             localStorage.setItem('remotePeerId', remotePeerId);
 
+            // MODIFIER LE BOUTON IMMÉDIATEMENT pour permettre l'annulation
+            const connectBtn = document.getElementById('connectBtn');
+            connectBtn.textContent = '❌ Annuler la connexion';
+            connectBtn.onclick = cancelConnection;
+            connectBtn.disabled = false; // Activer le bouton
+            isConnecting = true;
+            
+            // Désactiver le champ ID du contact pendant la connexion
+            document.getElementById('remotePeerId').disabled = true;
+            
+            updateStatus('Connexion en cours...', 'waiting');
+
             // Si pas de peer, créer un peer avec l'ID conservé
             if (!peer) {
                 if (myStoredId) {
@@ -871,27 +883,25 @@
                         console.log('Peer prêt, connexion en cours...');
                     } catch (err) {
                         alert('Erreur lors de l\'initialisation: ' + err.message);
+                        // Restaurer le bouton en cas d'erreur
+                        connectBtn.textContent = '📞 Se connecter';
+                        connectBtn.onclick = connectToPeer;
+                        connectBtn.disabled = false;
+                        isConnecting = false;
+                        document.getElementById('remotePeerId').disabled = false;
                         return;
                     }
                 } else {
                     alert('Veuillez d\'abord générer votre ID');
+                    // Restaurer le bouton en cas d'erreur
+                    connectBtn.textContent = '📞 Se connecter';
+                    connectBtn.onclick = connectToPeer;
+                    connectBtn.disabled = false;
+                    isConnecting = false;
+                    document.getElementById('remotePeerId').disabled = false;
                     return;
                 }
             }
-
-            // Marquer qu'une connexion est en cours
-            isConnecting = true;
-            
-            // Modifier le bouton pour permettre l'annulation
-            const connectBtn = document.getElementById('connectBtn');
-            connectBtn.textContent = '❌ Annuler la connexion';
-            connectBtn.onclick = cancelConnection;
-            connectBtn.disabled = false; // IMPORTANT : garder le bouton actif pour pouvoir annuler
-            
-            // Désactiver le champ ID du contact pendant la connexion
-            document.getElementById('remotePeerId').disabled = true;
-            
-            updateStatus('Connexion en cours...', 'waiting');
             
             conn = peer.connect(remotePeerId, {
                 reliable: true
@@ -1223,7 +1233,7 @@
                     }
                 }).then(() => {
                     // Enregistrer le nouveau service worker avec paramètre de version
-                    navigator.serviceWorker.register('./service-worker.js?v=39')
+                    navigator.serviceWorker.register('./service-worker.js?v=41')
                         .then((registration) => {
                             console.log('Service Worker v39 enregistré avec succès:', registration.scope);
                             // Forcer la mise à jour immédiate
