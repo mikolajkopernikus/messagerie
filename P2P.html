@@ -343,7 +343,7 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>🔐 Messagerie Point à Point Cryptée <span style="font-size: 0.4em;">v0.38</span></h1>
+            <h1>🔐 Messagerie Point à Point Cryptée <span style="font-size: 0.4em;">v0.39</span></h1>
             <div class="header-info">
                 <span class="header-id" id="headerId"></span>
             </div>
@@ -886,6 +886,7 @@
             const connectBtn = document.getElementById('connectBtn');
             connectBtn.textContent = '❌ Annuler la connexion';
             connectBtn.onclick = cancelConnection;
+            connectBtn.disabled = false; // IMPORTANT : garder le bouton actif pour pouvoir annuler
             
             // Désactiver le champ ID du contact pendant la connexion
             document.getElementById('remotePeerId').disabled = true;
@@ -909,6 +910,7 @@
                     // Restaurer l'interface
                     connectBtn.textContent = '📞 Se connecter';
                     connectBtn.onclick = connectToPeer;
+                    connectBtn.disabled = false; // Réactiver le bouton
                     
                     // Réactiver le champ
                     document.getElementById('remotePeerId').disabled = false;
