@@ -334,6 +334,10 @@
         .hidden {
             display: none !important;
         }
+
+        .invalid-input {
+            color: #dc3545 !important;
+        }
     </style>
 </head>
 <body>
@@ -370,7 +374,7 @@
             <div class="input-group">
                
                 <div class="id-input-wrapper"> <label>Votre ID <span style="font-size: 0.85em;"></span></label>
-                    <input type="text" id="myPeerId" placeholder="4 à 14 caractères" maxlength="18" oninput="this.value = this.value.toLowerCase()" style="width: 20ch;">
+                    <input type="text" id="myPeerId" placeholder="4 à 14 caractères" maxlength="16" oninput="this.value = this.value.toLowerCase()" style="width: 20ch;">
                     <button class="btn btn-primary btn-inline" onclick="generateId()">
                         🎲 Générer
                     </button>
@@ -493,6 +497,12 @@
                 // Auto-formater l'ID pendant la saisie
                 if (rawValue.length > 0) {
                     e.target.value = formatId(rawValue);
+                }
+                // Colorer en rouge si moins de 4 caractères
+                if (rawValue.length > 0 && rawValue.length < 4) {
+                    e.target.classList.add('invalid-input');
+                } else {
+                    e.target.classList.remove('invalid-input');
                 }
                 // Activer le bouton si entre 4 et 14 caractères
                 const isValid = rawValue.length >= 4 && rawValue.length <= 14;
