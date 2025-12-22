@@ -425,7 +425,7 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>🔐 Canal privé chiffré <span style="font-size: 0.4em;">v0.47</span></h1>
+            <h1>🔐 Canal privé chiffré <span style="font-size: 0.4em;">v0.48</span></h1>
             <div class="header-info">
                 <span class="header-id" id="headerId"></span>
             </div>
@@ -495,7 +495,7 @@
             </div>
         </div>
         <!-- Élément audio pour le flux distant -->
-        <audio id="remoteAudio" autoplay></audio>
+        <audio id="remoteAudio" playsinline></audio>
     </div>
 
     <script>
@@ -939,7 +939,7 @@
             connectBtn.disabled = false; // Activer le bouton
             connectBtn.removeAttribute('disabled'); // FORCER le retrait de l'attribut disabled
             console.log('🔧 APRÈS: connectBtn.disabled =', connectBtn.disabled);
-            console.log('🔧 Bouton doit être ACTIF maintenant - version v0.43');
+            console.log('🔧 Bouton doit être ACTIF maintenant - version v0.48');
             isConnecting = true;
             
             // Désactiver le champ ID du contact pendant la connexion
@@ -1241,7 +1241,18 @@
                     console.log('Flux audio distant reçu');
                     const remoteAudio = document.getElementById('remoteAudio');
                     remoteAudio.srcObject = remoteStream;
-                    remoteAudio.play().catch(e => console.error('Erreur lecture audio:', e));
+                    // Forcer la lecture avec gestion d'erreur pour mobile
+                    remoteAudio.play().catch(e => {
+                        console.warn('Autoplay bloqué, tentative avec interaction:', e);
+                        // Sur mobile, demander une interaction utilisateur
+                        addSystemMessage('🔊 Cliquez pour activer le son');
+                        document.addEventListener('click', function playAudio() {
+                            remoteAudio.play().then(() => {
+                                console.log('Audio activé après interaction');
+                                document.removeEventListener('click', playAudio);
+                            });
+                        }, { once: true });
+                    });
                 });
 
                 mediaCall.on('close', () => {
@@ -1287,7 +1298,18 @@
                     console.log('Flux audio distant reçu (appel entrant)');
                     const remoteAudio = document.getElementById('remoteAudio');
                     remoteAudio.srcObject = remoteStream;
-                    remoteAudio.play().catch(e => console.error('Erreur lecture audio:', e));
+                    // Forcer la lecture avec gestion d'erreur pour mobile
+                    remoteAudio.play().catch(e => {
+                        console.warn('Autoplay bloqué, tentative avec interaction:', e);
+                        // Sur mobile, demander une interaction utilisateur
+                        addSystemMessage('🔊 Cliquez pour activer le son');
+                        document.addEventListener('click', function playAudio() {
+                            remoteAudio.play().then(() => {
+                                console.log('Audio activé après interaction');
+                                document.removeEventListener('click', playAudio);
+                            });
+                        }, { once: true });
+                    });
                 });
 
                 call.on('close', () => {
@@ -1465,7 +1487,7 @@
                     }
                 }).then(() => {
                     // Enregistrer le nouveau service worker avec paramètre de version
-                    navigator.serviceWorker.register('./service-worker.js?v=45')
+                    navigator.serviceWorker.register('./service-worker.js?v=46')
                         .then((registration) => {
                             console.log('Service Worker v39 enregistré avec succès:', registration.scope);
                             // Forcer la mise à jour immédiate
@@ -1480,4 +1502,6 @@
     </script>
 </body>
 </html>
+
+
 
