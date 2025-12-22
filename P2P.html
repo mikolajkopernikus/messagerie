@@ -343,7 +343,7 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>🔐 Messagerie Point à Point Cryptée <span style="font-size: 0.4em;">v0.36</span></h1>
+            <h1>🔐 Messagerie Point à Point Cryptée <span style="font-size: 0.4em;">v0.38</span></h1>
             <div class="header-info">
                 <span class="header-id" id="headerId"></span>
             </div>
@@ -419,6 +419,8 @@
         let myStoredId = localStorage.getItem('myPeerId') || ''; // ID conservé
         let remoteStoredId = localStorage.getItem('remotePeerId') || ''; // ID contact conservé
         let inactivityTimer = null; // Timer pour déconnexion après 10 min d'inactivité
+        let connectionTimeout = null; // Timer pour timeout de connexion (30 secondes)
+        let isConnecting = false; // Flag pour indiquer une connexion en cours
 
         // Consonnes et voyelles
         const consonnes = 'bcdfghjklmnpqrstvwxz';
@@ -807,8 +809,47 @@
             });
         }
 
+        // Annuler la tentative de connexion en cours
+        function cancelConnection() {
+            console.log('Annulation de la connexion en cours...');
+            
+            // Annuler le timeout
+            if (connectionTimeout) {
+                clearTimeout(connectionTimeout);
+                connectionTimeout = null;
+            }
+            
+            // Fermer la connexion si elle existe
+            if (conn) {
+                conn.close();
+                conn = null;
+            }
+            
+            // Réinitialiser le flag
+            isConnecting = false;
+            
+            // Restaurer l'interface
+            const connectBtn = document.getElementById('connectBtn');
+            connectBtn.textContent = '📞 Se connecter';
+            connectBtn.onclick = connectToPeer;
+            connectBtn.disabled = false;
+            
+            // Remettre le statut
+            updateStatus('En attente de connexion...', 'waiting');
+            
+            // Réactiver le champ ID du contact
+            document.getElementById('remotePeerId').disabled = false;
+            
+            console.log('Connexion annulée - vous pouvez réessayer');
+        }
+
         // Se connecter à un peer
         async function connectToPeer() {
+            // Si déjà en train de se connecter, ne rien faire
+            if (isConnecting) {
+                return;
+            }
+            
             const remoteInput = document.getElementById('remotePeerId').value;
             const remotePeerId = unformatId(remoteInput).trim().toLowerCase();
             
@@ -838,11 +879,44 @@
                 }
             }
 
-            updateStatus('Connexion en cours...', false);
+            // Marquer qu'une connexion est en cours
+            isConnecting = true;
+            
+            // Modifier le bouton pour permettre l'annulation
+            const connectBtn = document.getElementById('connectBtn');
+            connectBtn.textContent = '❌ Annuler la connexion';
+            connectBtn.onclick = cancelConnection;
+            
+            // Désactiver le champ ID du contact pendant la connexion
+            document.getElementById('remotePeerId').disabled = true;
+            
+            updateStatus('Connexion en cours...', 'waiting');
             
             conn = peer.connect(remotePeerId, {
                 reliable: true
             });
+            
+            // Démarrer le timeout de 30 secondes
+            connectionTimeout = setTimeout(() => {
+                if (isConnecting && conn && !conn.open) {
+                    console.log('Timeout de connexion atteint (30 secondes)');
+                    
+                    // Fermer la connexion échouée
+                    conn.close();
+                    conn = null;
+                    isConnecting = false;
+                    
+                    // Restaurer l'interface
+                    connectBtn.textContent = '📞 Se connecter';
+                    connectBtn.onclick = connectToPeer;
+                    
+                    // Réactiver le champ
+                    document.getElementById('remotePeerId').disabled = false;
+                    
+                    updateStatus('Échec de connexion (timeout)', 'disconnected');
+                    alert('❌ Impossible de se connecter à cet ID.\n\nVérifiez que :\n• L\'ID est correct\n• Votre contact a bien ouvert sa connexion\n• Votre contact est en ligne\n\nVous pouvez réessayer avec un autre ID.');
+                }
+            }, 30000); // 30 secondes
             
             setupConnection();
         }
@@ -852,6 +926,23 @@
             conn.on('open', async () => {
                 // Annuler le timer d'inactivité car la connexion est établie
                 clearInactivityTimer();
+                
+                // Annuler le timeout de connexion car la connexion a réussi
+                if (connectionTimeout) {
+                    clearTimeout(connectionTimeout);
+                    connectionTimeout = null;
+                }
+                
+                // Réinitialiser le flag de connexion
+                isConnecting = false;
+                
+                // Restaurer le bouton (au cas où)
+                const connectBtn = document.getElementById('connectBtn');
+                connectBtn.textContent = '📞 Se connecter';
+                connectBtn.onclick = connectToPeer;
+                
+                // Réactiver le champ
+                document.getElementById('remotePeerId').disabled = false;
                 
                 updateStatus('Connecté', 'connected');
                 document.getElementById('connectionPanel').classList.add('hidden');
