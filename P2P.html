@@ -316,20 +316,9 @@
             font-size: 14px;
         }
 
-        .encryption-badge {
-            display: inline-block;
-            background: #28a745;
-            color: white;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 12px;
-            font-weight: 600;
-            margin-left: 10px;
-        }
-
         .disconnect-badge {
             display: inline-block;
-            background: #dc3545;
+            background: #6c757d;
             color: white;
             padding: 4px 8px;
             border-radius: 4px;
@@ -342,7 +331,7 @@
         }
 
         .disconnect-badge:hover {
-            background: #c82333;
+            background: #5a6268;
         }
 
         .hidden {
@@ -439,7 +428,7 @@
 <body>
     <div class="container">
         <div class="header">
-            <span class="header-version-badge">P2P<br>v1.59</span>
+            <span class="header-version-badge">P2P<br>v1.60</span>
             <h1>🔐 Discussion chiffrée</h1>
             <div class="header-info">
                 <span class="header-id" id="headerId"></span>
@@ -450,7 +439,6 @@
             <div class="status-indicator" id="statusIndicator"></div>
             <div>
                 <strong id="statusText">Déconnecté</strong>
-                <span class="encryption-badge" id="encryptionBadge" style="display: none;">🔒 ECDH P-384</span>
                 <button class="disconnect-badge" id="disconnectBadge" style="display: none;" onclick="disconnect()">❌ Se déconnecter</button>
             </div>
         </div>
@@ -1038,7 +1026,6 @@
                 document.getElementById('connectionPanel').classList.add('hidden');
                 document.getElementById('chatContainer').classList.add('active');
                 document.getElementById('disconnectBtn').style.display = 'block';
-                document.getElementById('encryptionBadge').style.display = 'inline-block';
                 document.getElementById('disconnectBadge').style.display = 'inline-block';
                 document.getElementById('voiceControls').classList.add('active');
 
@@ -1576,7 +1563,6 @@
             document.getElementById('connectionPanel').classList.remove('hidden');
             document.getElementById('chatContainer').classList.remove('active');
             document.getElementById('messages').innerHTML = '';
-            document.getElementById('encryptionBadge').style.display = 'none';
             document.getElementById('disconnectBadge').style.display = 'none';
             document.getElementById('disconnectBtn').style.display = 'none';
             
