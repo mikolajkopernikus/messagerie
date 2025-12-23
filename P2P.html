@@ -423,12 +423,88 @@
             0%, 100% { opacity: 1; }
             50% { opacity: 0.7; }
         }
+
+        /* Modal personnalisée */
+        .custom-modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 10000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .custom-modal-overlay.show {
+            display: flex;
+        }
+
+        .custom-modal {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            max-width: 90%;
+            width: 400px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+            animation: modalSlideIn 0.3s ease-out;
+        }
+
+        @keyframes modalSlideIn {
+            from {
+                transform: translateY(-50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .custom-modal-content {
+            font-size: 16px;
+            line-height: 1.5;
+            color: #333;
+            margin-bottom: 20px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .custom-modal-button {
+            background: #2c3e50;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            transition: background 0.3s;
+        }
+
+        .custom-modal-button:hover {
+            background: #34495e;
+        }
+
+        .custom-modal-button:active {
+            transform: scale(0.98);
+        }
     </style>
 </head>
 <body>
+    <!-- Modal personnalisée -->
+    <div class="custom-modal-overlay" id="customModalOverlay">
+        <div class="custom-modal">
+            <div class="custom-modal-content" id="customModalContent"></div>
+            <button class="custom-modal-button" onclick="closeCustomModal()">OK</button>
+        </div>
+    </div>
     <div class="container">
         <div class="header">
-            <span class="header-version-badge">P2P<br>v1.62</span>
+            <span class="header-version-badge">P2P<br>v1.63</span>
             <h1>🔐 Discussion chiffrée</h1>
             <div class="header-info">
                 <span class="header-id" id="headerId"></span>
@@ -502,6 +578,30 @@
     </div>
 
     <script>
+        // Fonction pour afficher une alerte personnalisée
+        function showCustomAlert(message) {
+            const overlay = document.getElementById('customModalOverlay');
+            const content = document.getElementById('customModalContent');
+            content.textContent = message;
+            overlay.classList.add('show');
+        }
+
+        // Fonction pour fermer la modale
+        function closeCustomModal() {
+            const overlay = document.getElementById('customModalOverlay');
+            overlay.classList.remove('show');
+        }
+
+        // Fermer la modale en cliquant sur l'overlay
+        document.addEventListener('DOMContentLoaded', function() {
+            const overlay = document.getElementById('customModalOverlay');
+            overlay.addEventListener('click', function(e) {
+                if (e.target === overlay) {
+                    closeCustomModal();
+                }
+            });
+        });
+
         let peer = null;
         let conn = null;
         let encryptionKey = null;
@@ -824,7 +924,7 @@
             const myId = unformatId(document.getElementById('myPeerId').value).trim().toLowerCase();
             
             if (myId.length < 4 || myId.length > 14) {
-                alert('L\'ID doit contenir entre 4 et 14 caractères');
+                showCustomAlert('L\'ID doit contenir entre 4 et 14 caractères');
                 registerBtn.disabled = false;
                 registerBtn.textContent = 'Annoncer sa connexion';
                 return;
@@ -873,7 +973,7 @@
 
             peer.on('error', (err) => {
                 console.error('Erreur PeerJS:', err);
-                alert('Erreur: ' + err.message);
+                showCustomAlert('Erreur: ' + err.message);
                 registerBtn.disabled = false;
                 registerBtn.textContent = 'Annoncer sa connexion';
                 document.getElementById('myPeerId').readOnly = false;
@@ -926,7 +1026,7 @@
             const remotePeerId = unformatId(document.getElementById('remotePeerId').value).trim().toLowerCase();
             
             if (remotePeerId.length < 4 || remotePeerId.length > 14) {
-                alert('Veuillez entrer un ID valide (4 à 14 caractères)');
+                showCustomAlert('Veuillez entrer un ID valide (4 à 14 caractères)');
                 return;
             }
             
@@ -958,7 +1058,7 @@
                         await reinitializePeerWithStoredId();
                         console.log('Peer prêt, connexion en cours...');
                     } catch (err) {
-                        alert('Erreur lors de l\'initialisation: ' + err.message);
+                        showCustomAlert('Erreur lors de l\'initialisation: ' + err.message);
                         // Restaurer le bouton en cas d'erreur
                         isConnecting = false;
                         resetConnectButton();
@@ -966,7 +1066,7 @@
                         return;
                     }
                 } else {
-                    alert('Veuillez d\'abord générer votre ID');
+                    showCustomAlert('Veuillez d\'abord générer votre ID');
                     // Restaurer le bouton en cas d'erreur
                     isConnecting = false;
                     resetConnectButton();
@@ -996,7 +1096,7 @@
                     document.getElementById('remotePeerId').disabled = false;
                     
                     updateStatus('Échec de connexion (timeout)', 'disconnected');
-                    alert('❌ Impossible de se connecter à cet ID.\n\nVérifiez que :\n• L\'ID est correct\n• Votre contact a bien ouvert sa connexion\n• Votre contact est en ligne\n\nVous pouvez réessayer avec un autre ID.');
+                    showCustomAlert('❌ Impossible de se connecter à cet ID.\n\nVérifiez que :\n• L\'ID est correct\n• Votre contact a bien ouvert sa connexion\n• Votre contact est en ligne\n\nVous pouvez réessayer avec un autre ID.');
                 }
             }, 30000); // 30 secondes
             
@@ -1138,7 +1238,7 @@
             
             // Vérifier que la clé est disponible
             if (!encryptionKey) {
-                alert('⚠️ Clé de cryptage non disponible. Attendez la synchronisation...');
+                showCustomAlert('⚠️ Clé de cryptage non disponible. Attendez la synchronisation...');
                 return;
             }
 
@@ -1227,13 +1327,13 @@
         // Démarrer un appel vocal
         async function startVoiceCall() {
             if (!peer || !conn) {
-                alert('⚠️ Veuillez d\'abord établir une connexion chat');
+                showCustomAlert('⚠️ Veuillez d\'abord établir une connexion chat');
                 return;
             }
 
             // Vérifier que la connexion est toujours ouverte
             if (!conn.open) {
-                alert('⚠️ La connexion chat est fermée. Reconnectez-vous.');
+                showCustomAlert('⚠️ La connexion chat est fermée. Reconnectez-vous.');
                 return;
             }
 
@@ -1355,7 +1455,7 @@
                     errorMsg += 'Erreur: ' + err.message;
                 }
                 
-                alert(errorMsg);
+                showCustomAlert(errorMsg);
                 addSystemMessage('⚠️ Échec démarrage appel vocal');
             }
         }
@@ -1473,7 +1573,7 @@
                     errorMsg += 'Erreur: ' + err.message;
                 }
                 
-                alert(errorMsg);
+                showCustomAlert(errorMsg);
                 addSystemMessage('⚠️ Échec réponse appel');
             }
         }
