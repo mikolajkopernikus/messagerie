@@ -199,6 +199,26 @@
             transform: none !important;
         }
 
+        .btn-return {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            padding: 15px;
+            font-size: 17px;
+            font-weight: 700;
+            margin: 15px;
+            display: none;
+            animation: pulse-button 2s infinite;
+        }
+
+        .btn-return.show {
+            display: block;
+        }
+
+        @keyframes pulse-button {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+        }
+
         .btn-inline {
             width: auto;
             padding: 8px 12px;
@@ -504,7 +524,7 @@
     </div>
     <div class="container">
         <div class="header">
-            <span class="header-version-badge">P2P<br>v1.64</span>
+            <span class="header-version-badge">P2P<br>v1.65</span>
             <h1>🔐 Discussion chiffrée</h1>
             <div class="header-info">
                 <span class="header-id" id="headerId"></span>
@@ -561,6 +581,7 @@
 
         <!-- Zone de chat -->
         <div class="chat-container" id="chatContainer">
+            <button class="btn btn-return" id="returnBtn" onclick="returnToSetup()">🏠 Accueil</button>
             <div class="voice-status" id="voiceStatus">🎤 Appel vocal en cours...</div>
             <div class="messages" id="messages"></div>
             <div class="voice-controls" id="voiceControls">
@@ -1217,10 +1238,11 @@
             conn.on('close', () => {
                 updateStatus('Déconnecté', 'disconnected');
                 addSystemMessage('❌ Connexion fermée par le correspondant');
-                // Recharger la page pour réinitialiser proprement
-                setTimeout(() => {
-                    location.reload();
-                }, 2000); // Attendre 2 secondes pour que l'utilisateur voie le message
+                // Afficher le bouton de retour au lieu de recharger automatiquement
+                document.getElementById('returnBtn').classList.add('show');
+                document.getElementById('disconnectBadge').style.display = 'none';
+                // Désactiver l'input de message
+                document.getElementById('messageInput').disabled = true;
             });
 
             conn.on('error', (err) => {
@@ -1654,11 +1676,29 @@
             if (peer) peer.destroy();
             conn = null;
             peer = null;
+            
+            // Afficher le bouton de retour au lieu de réinitialiser immédiatement
+            updateStatus('Déconnecté', 'disconnected');
+            addSystemMessage('❌ Vous avez terminé la connexion');
+            document.getElementById('returnBtn').classList.add('show');
+            document.getElementById('disconnectBadge').style.display = 'none';
+            // Désactiver l'input de message
+            document.getElementById('messageInput').disabled = true;
+        }
+
+        // Revenir à la page de paramétrage (appelé par le bouton)
+        function returnToSetup() {
             resetChat();
         }
 
         // Réinitialiser le chat
         function resetChat() {
+            // Cacher le bouton de retour
+            document.getElementById('returnBtn').classList.remove('show');
+            
+            // Réactiver l'input de message
+            document.getElementById('messageInput').disabled = false;
+            
             // Revenir à l'écran de connexion
             document.getElementById('connectionPanel').classList.remove('hidden');
             document.getElementById('chatContainer').classList.remove('active');
