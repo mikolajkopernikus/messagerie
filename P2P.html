@@ -425,7 +425,7 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>🔐 Discussion P2P chiffrée <span style="font-size: 0.4em;">v1.00</span></h1>
+            <h1>🔐 Discussion chiffrée <span style="font-size: 0.4em;"> P2P v1.52</span></h1>
             <div class="header-info">
                 <span class="header-id" id="headerId"></span>
             </div>
@@ -456,7 +456,7 @@
             <div class="input-group">
                
                 <div class="id-input-wrapper"> <label>Votre ID <span style="font-size: 0.85em;"></span></label>
-                    <input type="text" id="myPeerId" placeholder="4 à 14 caractères" maxlength="17" oninput="this.value = this.value.toLowerCase()" style="width: 17ch;">
+                    <input type="text" id="myPeerId" placeholder="4 à 14 caractères" maxlength="17" oninput="this.value = this.value.toLowerCase()" style="width: 18ch;">
                     <button class="btn btn-primary btn-inline" onclick="generateId()">
                         🎲 Générer
                     </button>
@@ -468,7 +468,7 @@
             </button>
 
             <div class="input-group">
-                <label>ID de votre contact <input type="text" id="remotePeerId" placeholder="4 à 14 caractères" maxlength="18" oninput="this.value = this.value.toLowerCase()" style="width: 23ch;"></label>
+                <label>ID de votre contact <input type="text" id="remotePeerId" placeholder="4 à 14 caractères" maxlength="17" oninput="this.value = this.value.toLowerCase()" style="width: 18ch;"></label>
             </div>
 
             <button class="btn btn-primary" id="connectBtn" onclick="connectToPeer()" disabled>
