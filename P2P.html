@@ -444,8 +444,8 @@
         <div class="connection-panel" id="connectionPanel">
             <div class="info-box">
                 <strong>Étape 1 :</strong> Générez un ID aléatoire ou créez le (4-14 car.).<br>
-                <strong>Étape 2 :</strong> Ouvrez la connexion pour enregistrer votre ID sur le serveur.<br>
-                <strong>Étape 3 :</strong> Entrez l'ID de votre contact pour se connecter.
+                <strong>Étape 2 :</strong> Annoncez votre connexion et votre ID au serveur.<br>
+                <strong>Étape 3 :</strong> Entrez l'ID de votre contact puis démarrez.
             </div>
 
             <div class="input-group inline">
@@ -456,7 +456,7 @@
             <div class="input-group">
                
                 <div class="id-input-wrapper"> <label>Votre ID <span style="font-size: 0.85em;"></span></label>
-                    <input type="text" id="myPeerId" placeholder="4 à 14 caractères" maxlength="16" oninput="this.value = this.value.toLowerCase()" style="width: 20ch;">
+                    <input type="text" id="myPeerId" placeholder="4 à 14 caractères" maxlength="17" oninput="this.value = this.value.toLowerCase()" style="width: 17ch;">
                     <button class="btn btn-primary btn-inline" onclick="generateId()">
                         🎲 Générer
                     </button>
@@ -464,7 +464,7 @@
             </div>
 
             <button class="btn btn-primary" id="registerBtn" onclick="registerPeer()" disabled>
-                 S'enregistrer sur le serveur
+                 Annoncer sa connexion
             </button>
 
             <div class="input-group">
@@ -472,7 +472,7 @@
             </div>
 
             <button class="btn btn-primary" id="connectBtn" onclick="connectToPeer()" disabled>
-                [chat] Se connecter
+                🚀 Démarrer
             </button>
 
             <button class="btn btn-secondary" id="disconnectBtn" onclick="disconnect()" style="display: none;">
@@ -823,7 +823,7 @@
             if (myId.length < 4 || myId.length > 14) {
                 alert('L\'ID doit contenir entre 4 et 14 caractères');
                 registerBtn.disabled = false;
-                registerBtn.textContent = '🚀 S\'enregistrer sur le serveur';
+                registerBtn.textContent = 'Annoncer sa connexion';
                 return;
             }
             
@@ -872,7 +872,7 @@
                 console.error('Erreur PeerJS:', err);
                 alert('Erreur: ' + err.message);
                 registerBtn.disabled = false;
-                registerBtn.textContent = '🚀 S\'enregistrer sur le serveur';
+                registerBtn.textContent = 'Annoncer sa connexion';
                 document.getElementById('myPeerId').readOnly = false;
             });
         }
@@ -1607,7 +1607,7 @@
             
             // Remettre le texte du bouton register
             const registerBtn = document.getElementById('registerBtn');
-            registerBtn.textContent = '🚀 S\'enregistrer sur le serveur';
+            registerBtn.textContent = 'Annoncer sa connexion';
         }
 
         // Enregistrer le Service Worker pour PWA
