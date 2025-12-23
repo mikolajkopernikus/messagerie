@@ -428,7 +428,7 @@
 <body>
     <div class="container">
         <div class="header">
-            <span class="header-version-badge">P2P<br>v1.60</span>
+            <span class="header-version-badge">P2P<br>v1.61</span>
             <h1>🔐 Discussion chiffrée</h1>
             <div class="header-info">
                 <span class="header-id" id="headerId"></span>
@@ -1081,7 +1081,7 @@
                         encryptionKey = await deriveSharedKey(myKeyPair.privateKey, otherPublicKey);
                         console.log('Clé partagée dérivée avec ECDH P-384');
                         
-                        addSystemMessage('🔐 Connexion établie et cryptée (ECDH P-384) !');
+                        addSystemMessage('🔐 Connexion cryptée établie (ECDH P-384) !');
                         
                         // Envoyer confirmation
                         conn.send({ type: 'key-ready' });
@@ -1092,7 +1092,7 @@
                 } else if (data.type === 'key-ready') {
                     // L'autre peer a terminé le dérivation de clé
                     console.log('Confirmation: l\'autre peer est prêt');
-                    addSystemMessage('🔐 Connexion établie et cryptée (ECDH P-384) !');
+                    addSystemMessage('🔐 Connexion cryptée établie (ECDH P-384) !');
                 } else if (data.type === 'message') {
                     // Attendre que la clé soit disponible
                     if (!encryptionKey) {
